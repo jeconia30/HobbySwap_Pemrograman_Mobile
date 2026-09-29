@@ -26,43 +26,62 @@ class AppChip extends StatelessWidget {
     final scheme = theme.colorScheme;
     final colors = AppColors.of(context);
 
+    // Visual 38 dp, area sentuh tetap 48 dp (padding atas-bawah ikut bisa ditekan).
     return Semantics(
       button: true,
       selected: selected,
-      child: Material(
-        color: selected ? scheme.primary : scheme.surface,
-        shape: StadiumBorder(
-          side: BorderSide(color: selected ? scheme.primary : colors.border),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: AppSizes.chip),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (showCheck && selected) ...[
-                    Icon(Icons.check_rounded,
-                        size: AppSizes.iconXs, color: scheme.onPrimary),
-                    const SizedBox(width: AppSpacing.xs),
-                  ],
-                  Flexible(
-                    child: Text(
-                      label,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: selected
-                            ? scheme.onPrimary
-                            : scheme.onSurfaceVariant,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                    ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: (AppSizes.minTapTarget - AppSizes.chip) / 2,
+          ),
+          child: Material(
+            color: selected ? scheme.primary : scheme.surface,
+            shape: StadiumBorder(
+              side: BorderSide(
+                color: selected ? scheme.primary : colors.border,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: AppSizes.chip),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showCheck && selected) ...[
+                        Icon(
+                          Icons.check_rounded,
+                          size: AppSizes.iconXs,
+                          color: scheme.onPrimary,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                      ],
+                      Flexible(
+                        child: Text(
+                          label,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: selected
+                                ? scheme.onPrimary
+                                : scheme.onSurfaceVariant,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

@@ -20,6 +20,7 @@ abstract interface class ItemRepository {
     ItemSort sort = ItemSort.terpopuler,
     int? hargaMaks,
     bool hanyaTersedia = false,
+    bool hanyaBarter = false,
   });
 
   Future<ItemListing?> itemById(String id);

@@ -85,6 +85,10 @@ void main() {
       expect(status(goproDisetujui), StatusBooking.disetujui,
           reason: 'baru penyewa yang setuju');
 
+      // M10: pemilik mencatat pembayaran COD dulu.
+      await storage.saveSession(dimas);
+      await bookingRepo.catatPembayaran(goproDisetujui,
+          metode: MetodeBayar.tunai, diterima: true);
       final c = await checklist.approve(
           goproDisetujui, TahapChecklist.awal, dimas);
       expect(c.selesai, isTrue);

@@ -39,7 +39,7 @@ void main() {
     expect(find.text('Halo, Gregorian'), findsOneWidget);
     expect(find.text('Kampus USU · Medan'), findsOneWidget);
     expect(find.text('Populer di kampus'), findsOneWidget);
-    expect(find.text('Musim camping! Tenda & carrier mulai Rp25rb/hari'),
+    expect(find.text('Musim camping! Tenda & carrier mulai Rp25.000/hari'),
         findsOneWidget);
     expect(find.byKey(const Key('verification-banner')), findsNothing);
 

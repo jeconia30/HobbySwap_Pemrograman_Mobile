@@ -38,6 +38,13 @@ _Item _$ItemFromJson(Map<String, dynamic> json) => _Item(
       const <RentangTanggal>[],
   jumlahDisewa: (json['jumlahDisewa'] as num?)?.toInt() ?? 0,
   aktif: json['aktif'] as bool? ?? true,
+  dendaPerHari: (json['dendaPerHari'] as num?)?.toInt() ?? 0,
+  bisaBarter: json['bisaBarter'] as bool? ?? false,
+  minatBarter:
+      (json['minatBarter'] as List<dynamic>?)
+          ?.map((e) => $enumDecode(_$KategoriEnumMap, e))
+          .toList() ??
+      const <Kategori>[],
 );
 
 Map<String, dynamic> _$ItemToJson(_Item instance) => <String, dynamic>{
@@ -54,6 +61,11 @@ Map<String, dynamic> _$ItemToJson(_Item instance) => <String, dynamic>{
       .toList(),
   'jumlahDisewa': instance.jumlahDisewa,
   'aktif': instance.aktif,
+  'dendaPerHari': instance.dendaPerHari,
+  'bisaBarter': instance.bisaBarter,
+  'minatBarter': instance.minatBarter
+      .map((e) => _$KategoriEnumMap[e]!)
+      .toList(),
 };
 
 const _$KategoriEnumMap = {

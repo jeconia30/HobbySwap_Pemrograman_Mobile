@@ -1,4 +1,5 @@
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/formatters.dart';
 import '../../item/domain/item.dart';
 
 /// Batas lama sewa sekali pengajuan.
@@ -78,3 +79,37 @@ MasalahRentang? periksaRentang({
   }
   return null;
 }
+
+/// Denda keterlambatan: hari lewat tanggal kembali × denda per hari.
+/// Dihitung terhadap [hariKembali] (hari ini untuk "denda sementara",
+/// atau hari checklist pengembalian).
+({int hari, int total}) hitungDenda({
+  required DateTime tanggalKembali,
+  required DateTime hariKembali,
+  required int dendaPerHari,
+}) {
+  final hari = daysBetween(tanggalKembali, hariKembali);
+  if (hari <= 0) return (hari: 0, total: 0);
+  return (hari: hari, total: hari * dendaPerHari);
+}
+
+/// Saran denda di form barang: 50% harga sewa, dibulatkan ke Rp500.
+int saranDenda(int hargaPerHari) => (hargaPerHari * 0.5 / 500).round() * 500;
+
+/// Aturan pembatalan sewa yang sudah disetujui (README "Aturan transaksi").
+enum AturanBatal {
+  /// Paling lambat H-1 sebelum tanggal ambil: bebas.
+  bebas,
+
+  /// Hari H (atau lewat) sebelum serah terima: boleh, tercatat di profil.
+  mendadak,
+
+  /// Sudah berlangsung/selesai/ditolak: tidak bisa dibatalkan.
+  tidakBisa,
+}
+
+
+/// "Denda telat Rp22.500/hari" atau "Tanpa denda keterlambatan".
+String teksDenda(int dendaPerHari) => dendaPerHari > 0
+    ? 'Denda telat ${formatRupiah(dendaPerHari)}/hari'
+    : 'Tanpa denda keterlambatan';

@@ -14,8 +14,13 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_chip.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_press_scale.dart';
+import '../../../core/widgets/app_search_field.dart';
 import '../../../core/widgets/app_icon_tile_button.dart';
 import '../../../core/widgets/item_card.dart';
+import '../../activity/data/notification_providers.dart';
+import '../../chat/data/chat_providers.dart';
+import '../../favorit/presentation/favorit_button.dart';
 import '../../auth/domain/user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../item/domain/item.dart';
@@ -24,6 +29,7 @@ import '../../item/domain/kategori.dart';
 import '../../verification/presentation/verification_banner.dart';
 import 'home_controller.dart';
 import 'home_filter_sheet.dart';
+import '../../../core/constants/app_strings.dart';
 
 const _searchDebounce = Duration(milliseconds: 300);
 const _popularCount = 4;
@@ -70,16 +76,21 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _openFilter() async {
-    final result = await showHomeFilterSheet(context, ref.read(homeFilterProvider));
+    final result = await showHomeFilterSheet(
+      context,
+      ref.read(homeFilterProvider),
+    );
     if (result == null) return;
     _filter.applySheet(
       sort: result.sort,
       hargaMaks: result.hargaMaks,
       hanyaTersedia: result.hanyaTersedia,
+      hanyaBarter: result.hanyaBarter,
     );
   }
 
-  void _openItem(ItemListing l) => context.push(AppRoutes.barangDetail(l.item.id));
+  void _openItem(ItemListing l) =>
+      context.push(AppRoutes.barangDetail(l.item.id), extra: l);
 
   @override
   Widget build(BuildContext context) {
@@ -87,13 +98,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final filter = ref.watch(homeFilterProvider);
     final items = ref.watch(homeItemsProvider);
     final status = user?.statusVerifikasi;
-    final showBanner = status == StatusVerifikasi.belum ||
-        status == StatusVerifikasi.menunggu;
+    final showBanner =
+        status == StatusVerifikasi.belum || status == StatusVerifikasi.menunggu;
 
     SliverPadding padded(Widget sliver) => SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHome),
-          sliver: sliver,
-        );
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHome),
+      sliver: sliver,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -108,23 +119,29 @@ class _HomePageState extends ConsumerState<HomePage> {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.pageHome,
-                    AppSpacing.md, AppSpacing.pageHome, 0),
-                sliver: SliverList.list(children: [
-                  if (user != null) _Header(user: user),
-                  const SizedBox(height: AppSpacing.lg),
-                  if (showBanner) ...[
-                    const VerificationBanner(),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.pageHome,
+                  AppSpacing.md,
+                  AppSpacing.pageHome,
+                  0,
+                ),
+                sliver: SliverList.list(
+                  children: [
+                    if (user != null) _Header(user: user),
                     const SizedBox(height: AppSpacing.lg),
+                    if (showBanner) ...[
+                      const VerificationBanner(),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                    _SearchField(
+                      controller: _search,
+                      onChanged: _onSearchChanged,
+                      onClear: _clearSearch,
+                      filterCount: filter.sheetFilterCount,
+                      onFilter: _openFilter,
+                    ),
                   ],
-                  _SearchField(
-                    controller: _search,
-                    onChanged: _onSearchChanged,
-                    onClear: _clearSearch,
-                    filterCount: filter.sheetFilterCount,
-                    onFilter: _openFilter,
-                  ),
-                ]),
+                ),
               ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -136,14 +153,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
               if (!filter.isActive)
-                padded(SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-                    child: _PromoCard(
-                      onTap: () => _filter.setKategori(Kategori.camping),
+                padded(
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                      child: _PromoCard(
+                        onTap: () => _filter.setKategori(Kategori.camping),
+                      ),
                     ),
                   ),
-                )),
+                ),
               ..._results(items, filter, padded),
               SliverToBoxAdapter(
                 child: SizedBox(
@@ -166,41 +185,49 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     if (items.hasError) {
       return [
-        padded(SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-            child: AppEmptyState(
-              icon: Icons.wifi_off_rounded,
-              title: 'Koneksi lagi putus. Coba lagi ya.',
-              actionLabel: 'Coba lagi',
-              onAction: () => ref.invalidate(homeItemsProvider),
+        padded(
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+              child: AppEmptyState(
+                icon: Icons.wifi_off_rounded,
+                title: AppTeks.koneksiPutus,
+                actionLabel: AppTeks.cobaLagi,
+                onAction: () => ref.invalidate(homeItemsProvider),
+              ),
             ),
           ),
-        )),
+        ),
       ];
     }
 
     final list = items.value ?? const <ItemListing>[];
     if (list.isEmpty) {
       return [
-        padded(SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-            child: AppEmptyState(
-              key: const Key('home-empty'),
-              icon: Icons.search_off_rounded,
-              title: 'Belum ada barang yang cocok',
-              message: 'Coba kata kunci lain atau longgarkan filternya.',
-              actionLabel: 'Hapus filter',
-              onAction: _resetAll,
+        padded(
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+              child: AppEmptyState(
+                key: const Key('home-empty'),
+                icon: Icons.search_off_rounded,
+                title: 'Belum ada barang yang cocok',
+                message: 'Coba kata kunci lain atau longgarkan filternya.',
+                actionLabel: 'Hapus filter',
+                onAction: _resetAll,
+              ),
             ),
           ),
-        )),
+        ),
       ];
     }
 
     Widget grid(List<ItemListing> l) =>
-        padded(SliverItemGrid(listings: l, onTap: _openItem));
+        padded(SliverItemGrid(
+          listings: l,
+          onTap: _openItem,
+          aksiPojok: (l) => FavoritButton(itemId: l.item.id, diFoto: true),
+        ));
 
     if (filter.isActive) {
       return [
@@ -210,11 +237,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
     if (_showAll) {
       return [
-        padded(_SectionTitle(
-          'Semua barang',
-          actionLabel: 'Ringkas',
-          onAction: () => setState(() => _showAll = false),
-        )),
+        padded(
+          _SectionTitle(
+            'Semua barang',
+            actionLabel: 'Ringkas',
+            onAction: () => setState(() => _showAll = false),
+          ),
+        ),
         grid(list),
       ];
     }
@@ -224,11 +253,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final newest = list.skip(_popularCount).toList()
       ..sort((a, b) => b.item.id.compareTo(a.item.id));
     return [
-      padded(_SectionTitle(
-        'Populer di kampus',
-        actionLabel: 'Lihat semua',
-        onAction: () => setState(() => _showAll = true),
-      )),
+      padded(
+        _SectionTitle(
+          'Populer di kampus',
+          actionLabel: 'Lihat semua',
+          onAction: () => setState(() => _showAll = true),
+        ),
+      ),
       grid(popular),
       if (newest.isNotEmpty) ...[
         const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
@@ -255,8 +286,9 @@ class _Header extends StatelessWidget {
             children: [
               Text(
                 kampusLabel,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               Semantics(
                 header: true,
@@ -264,18 +296,40 @@ class _Header extends StatelessWidget {
                   'Halo, ${firstName(user.nama)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineLarge
-                      ?.merge(AppTextStyles.greeting),
+                  style: theme.textTheme.headlineLarge?.merge(
+                    AppTextStyles.greeting,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        AppIconTileButton(
-          icon: Icons.notifications_none_rounded,
-          tooltip: 'Aktivitas, ada notifikasi baru',
-          showDot: true,
-          onPressed: () => context.push(AppRoutes.aktivitas),
+        Consumer(
+          builder: (context, ref, _) {
+            final pesan = ref.watch(chatUnreadProvider).value ?? 0;
+            return AppIconTileButton(
+              key: const Key('ikon-pesan'),
+              icon: Icons.chat_bubble_outline_rounded,
+              tooltip: pesan > 0 ? 'Pesan, $pesan belum dibaca' : 'Pesan',
+              badgeCount: pesan,
+              badgeAngka: true,
+              onPressed: () => context.push(AppRoutes.pesan),
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final unread = ref.watch(unreadCountProvider).value ?? 0;
+            return AppIconTileButton(
+              key: const Key('lonceng'),
+              icon: Icons.notifications_none_rounded,
+              tooltip: unread > 0
+                  ? 'Aktivitas, $unread belum dibaca'
+                  : 'Aktivitas',
+              badgeCount: unread,
+              onPressed: () => context.push(AppRoutes.aktivitas),
+            );
+          },
         ),
         AppAvatar(user: user, onTap: () => context.go(AppRoutes.profil)),
       ],
@@ -300,70 +354,37 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      constraints: const BoxConstraints(minHeight: AppSizes.searchField),
-      padding: const EdgeInsets.only(left: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: AppRadius.noteAll,
-        border: Border.all(color: AppColors.of(context).border),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search_rounded,
-              color: scheme.onSurfaceVariant, size: AppSizes.iconMd),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: TextField(
-              key: const Key('home-search'),
-              controller: controller,
-              onChanged: onChanged,
-              textInputAction: TextInputAction.search,
-              style: theme.textTheme.bodyLarge,
-              decoration: const InputDecoration(
-                hintText: 'Cari kamera, tenda, sepeda…',
-                filled: false,
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-              ),
+    return AppSearchField(
+      fieldKey: const Key('home-search'),
+      controller: controller,
+      hint: 'Cari kamera, tenda, sepeda…',
+      onChanged: onChanged,
+      onClear: onClear,
+      trailing: IconButton(
+        key: const Key('home-filter'),
+        tooltip: filterCount > 0 ? 'Filter, $filterCount aktif' : 'Filter',
+        onPressed: onFilter,
+        style: IconButton.styleFrom(
+          fixedSize: const Size.square(AppSizes.filterButton),
+          minimumSize: const Size.square(AppSizes.filterButton),
+          tapTargetSize: MaterialTapTargetSize.padded,
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(AppRadius.filterButton),
             ),
           ),
-          if (controller.text.isNotEmpty)
-            IconButton(
-              tooltip: 'Hapus pencarian',
-              onPressed: onClear,
-              icon: const Icon(Icons.close_rounded, size: AppSizes.iconSm),
-            ),
-          IconButton(
-            key: const Key('home-filter'),
-            tooltip: filterCount > 0 ? 'Filter, $filterCount aktif' : 'Filter',
-            onPressed: onFilter,
-            style: IconButton.styleFrom(
-              fixedSize: const Size.square(AppSizes.filterButton),
-              minimumSize: const Size.square(AppSizes.filterButton),
-              tapTargetSize: MaterialTapTargetSize.padded,
-              backgroundColor: scheme.primary,
-              foregroundColor: scheme.onPrimary,
-              shape: const RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.all(Radius.circular(AppRadius.filterButton)),
-              ),
-            ),
-            icon: Badge(
-              isLabelVisible: filterCount > 0,
-              label: Text('$filterCount'),
-              backgroundColor: scheme.onSurface,
-              textColor: scheme.surface,
-              child: const Icon(Icons.tune_rounded, size: AppSizes.iconSm),
-            ),
-          ),
-        ],
+        ),
+        icon: Badge(
+          isLabelVisible: filterCount > 0,
+          label: Text('$filterCount'),
+          backgroundColor: scheme.onSurface,
+          textColor: scheme.surface,
+          child: const Icon(Icons.tune_rounded, size: AppSizes.iconSm),
+        ),
       ),
     );
   }
@@ -411,9 +432,10 @@ class _PromoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    const message = 'Musim camping! Tenda & carrier mulai Rp25rb/hari';
+    final message =
+        'Musim camping! Tenda & carrier mulai ${formatRupiah(25000)}/hari';
 
-    return Semantics(
+    final row = Semantics(
       button: true,
       label: 'Minggu ini. $message. Lihat kategori Camping',
       excludeSemantics: true,
@@ -470,8 +492,11 @@ class _PromoCard extends StatelessWidget {
                         color: AppPalette.cream,
                         borderRadius: AppRadius.inputAll,
                       ),
-                      child: const Icon(Icons.arrow_forward_rounded,
-                          color: AppPalette.lightAccent, size: AppSizes.iconSm),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: AppPalette.lightAccent,
+                        size: AppSizes.iconSm,
+                      ),
                     ),
                   ],
                 ),
@@ -481,6 +506,7 @@ class _PromoCard extends StatelessWidget {
         ),
       ),
     );
+    return AppPressScale(child: row);
   }
 }
 
@@ -501,7 +527,10 @@ class _SectionTitle extends StatelessWidget {
             Expanded(
               child: Semantics(
                 header: true,
-                child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
             ),
             if (actionLabel != null)

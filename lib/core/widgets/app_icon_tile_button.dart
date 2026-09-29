@@ -13,6 +13,8 @@ class AppIconTileButton extends StatelessWidget {
     required this.tooltip,
     required this.onPressed,
     this.showDot = false,
+    this.badgeCount = 0,
+    this.badgeAngka = false,
     this.backgroundColor,
     this.iconColor,
     this.size = AppSizes.tileButton,
@@ -22,6 +24,12 @@ class AppIconTileButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback? onPressed;
   final bool showDot;
+
+  /// 1 = titik; lebih dari 1 = angka (maksimal "9+").
+  final int badgeCount;
+
+  /// Selalu tampilkan angka, termasuk untuk 1 (mis. pesan belum dibaca).
+  final bool badgeAngka;
 
   /// Bila diisi, border tidak digambar.
   final Color? backgroundColor;
@@ -35,7 +43,10 @@ class AppIconTileButton extends StatelessWidget {
       tooltip: tooltip,
       onPressed: onPressed,
       icon: Badge(
-        isLabelVisible: showDot,
+        isLabelVisible: showDot || badgeCount > 0,
+        label: badgeCount > 1 || (badgeAngka && badgeCount == 1)
+            ? Text(badgeCount > 9 ? '9+' : '$badgeCount')
+            : null,
         smallSize: AppSpacing.sm,
         backgroundColor: scheme.error,
         child: Icon(icon, size: AppSizes.iconSm),

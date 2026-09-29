@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,31 +11,13 @@ import '../../../core/widgets/app_sticky_bottom.dart';
 import '../../../core/widgets/app_timeline.dart';
 import '../../auth/domain/user.dart';
 import '../../auth/presentation/auth_controller.dart';
-import 'verification_actions.dart';
 
-class VerifikasiStatusPage extends ConsumerStatefulWidget {
+/// Status verifikasi. Simulasi persetujuan (debug) ada di Profil → Alat pengembang.
+class VerifikasiStatusPage extends ConsumerWidget {
   const VerifikasiStatusPage({super.key});
 
   @override
-  ConsumerState<VerifikasiStatusPage> createState() =>
-      _VerifikasiStatusPageState();
-}
-
-class _VerifikasiStatusPageState extends ConsumerState<VerifikasiStatusPage> {
-  bool _approving = false;
-
-  Future<void> _debugApprove() async {
-    setState(() => _approving = true);
-    try {
-      await ref.read(verificationActionsProvider).debugApprove();
-      HapticFeedback.lightImpact();
-    } finally {
-      if (mounted) setState(() => _approving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final text = theme.textTheme;
     final colors = AppColors.of(context);
@@ -129,15 +109,6 @@ class _VerifikasiStatusPageState extends ConsumerState<VerifikasiStatusPage> {
                         ),
                       ]),
                     ),
-                    if (kDebugMode && !active) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Center(
-                        child: TextButton(
-                          onPressed: _approving ? null : _debugApprove,
-                          child: const Text('Simulasikan disetujui (debug)'),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),

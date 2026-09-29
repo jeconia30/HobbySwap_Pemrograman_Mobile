@@ -23,6 +23,7 @@ _HandoverChecklist _$HandoverChecklistFromJson(Map<String, dynamic> json) =>
     _HandoverChecklist(
       bookingId: json['bookingId'] as String,
       tahap: $enumDecode(_$TahapChecklistEnumMap, json['tahap']),
+      itemId: json['itemId'] as String?,
       daftarKondisi:
           (json['daftarKondisi'] as List<dynamic>?)
               ?.map((e) => KondisiItem.fromJson(e as Map<String, dynamic>))
@@ -43,6 +44,7 @@ Map<String, dynamic> _$HandoverChecklistToJson(_HandoverChecklist instance) =>
     <String, dynamic>{
       'bookingId': instance.bookingId,
       'tahap': _$TahapChecklistEnumMap[instance.tahap]!,
+      'itemId': instance.itemId,
       'daftarKondisi': instance.daftarKondisi.map((e) => e.toJson()).toList(),
       'disetujuiPemilik': instance.disetujuiPemilik,
       'disetujuiPenyewa': instance.disetujuiPenyewa,

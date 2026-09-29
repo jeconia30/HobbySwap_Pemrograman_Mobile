@@ -1,67 +1,54 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
+/// Logo HobbySwap: tile [AppAssets.logoTile], atau logo lengkap
+/// [AppAssets.logoSplash] untuk Splash.
 class HsLogoMark extends StatelessWidget {
-  const HsLogoMark({
-    super.key,
-    this.size = AppSizes.logoMark,
-    this.radius = AppRadius.logoMark,
-    this.background,
-    this.hColor,
-    this.sColor,
-  });
+  const HsLogoMark({super.key, this.size = AppSizes.logoMark})
+      : _onSplash = false;
 
-  /// Versi besar untuk Splash: tile krem, warna tetap di kedua mode.
+  /// Logo lengkap (tile + tulisan) dengan ukuran & posisi sama seperti splash
+  /// native, tanpa bayangan karena latar Splash selalu gelap.
   const HsLogoMark.splash({super.key})
-      : size = AppSizes.logoMarkLarge,
-        radius = AppRadius.logoMarkLarge,
-        background = AppPalette.lightBg,
-        hColor = AppPalette.lightAccent,
-        sColor = AppPalette.brandMid;
+      : size = AppSizes.splashLogo,
+        _onSplash = true;
 
   final double size;
-  final double radius;
-
-  /// Default: accent, on-accent, dan brandLeaf dari tema.
-  final Color? background;
-  final Color? hColor;
-  final Color? sColor;
+  final bool _onSplash;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final colors = AppColors.of(context);
-    final base = Theme.of(context).textTheme.headlineLarge?.copyWith(
-          fontSize: size * 0.42,
-          height: 1,
-          letterSpacing: -size * 0.02,
-        );
+    final light = Theme.of(context).brightness == Brightness.light;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
 
     return Semantics(
       label: 'Logo HobbySwap',
       image: true,
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
+      child: DecoratedBox(
+        // Tile krem perlu bayangan halus supaya tidak tenggelam di latar krem.
         decoration: BoxDecoration(
-          color: background ?? scheme.primary,
-          borderRadius: BorderRadius.circular(radius),
+          borderRadius:
+              BorderRadius.circular(size * AppSizes.logoTileCornerRatio),
+          boxShadow: light && !_onSplash
+              ? const [
+                  BoxShadow(
+                    color: AppPalette.logoShadow,
+                    blurRadius: AppSizes.logoShadowBlur,
+                    offset: Offset(0, AppSizes.logoShadowOffset),
+                  ),
+                ]
+              : null,
         ),
-        child: ExcludeSemantics(
-          child: Text.rich(
-            TextSpan(children: [
-              TextSpan(
-                  text: 'H',
-                  style: base?.copyWith(color: hColor ?? scheme.onPrimary)),
-              TextSpan(
-                  text: 'S',
-                  style: base?.copyWith(color: sColor ?? colors.brandLeaf)),
-            ]),
-            textScaler: TextScaler.noScaling,
-          ),
+        child: Image.asset(
+          _onSplash ? AppAssets.logoSplash : AppAssets.logoTile,
+          width: size,
+          height: size,
+          cacheWidth: (size * dpr).round(),
+          filterQuality: FilterQuality.medium,
+          excludeFromSemantics: true,
         ),
       ),
     );

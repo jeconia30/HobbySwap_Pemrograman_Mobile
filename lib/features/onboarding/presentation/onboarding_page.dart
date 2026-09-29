@@ -16,7 +16,8 @@ const _slides = <_Slide>[
   (
     art: OnboardingIllustration.rent,
     title: 'Pinjam alat hobi, tanpa harus beli.',
-    body: 'Kamera, tenda, sampai stik game. Sewa dari sesama mahasiswa di '
+    body:
+        'Kamera, tenda, sampai stik game. Sewa dari sesama mahasiswa di '
         'kampusmu, aman dengan verifikasi KTM.',
   ),
   (
@@ -26,9 +27,10 @@ const _slides = <_Slide>[
   ),
   (
     art: OnboardingIllustration.lend,
-    title: 'Punya barang nganggur? Sewakan.',
-    body: 'Pasang barangmu dalam semenit dan dapat tambahan uang jajan dari '
-        'teman sekampus.',
+    title: 'Punya barang nganggur? Sewakan atau barter.',
+    body:
+        'Pasang barangmu dalam semenit. Dapat uang jajan dari sewa, atau '
+        'tukar pinjam dengan barang teman sekampus.',
   ),
 ];
 
@@ -66,7 +68,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       _controller.jumpToPage(_index + 1);
     } else {
       _controller.nextPage(
-          duration: AppDurations.page, curve: Curves.easeOutCubic);
+        duration: AppDurations.page,
+        curve: Curves.easeOutCubic,
+      );
     }
   }
 
@@ -136,32 +140,42 @@ class _SlideView extends StatelessWidget {
     final theme = Theme.of(context);
     final text = theme.textTheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pageHorizontal),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: OnboardingArt(slide.art),
-              ),
+    // Font besar: ilustrasi mengecil dulu, lalu teks boleh digulir.
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.pageHorizontal,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: box.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: OnboardingArt(slide.art),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.group),
+                Semantics(
+                  header: true,
+                  child: Text(slide.title, style: text.headlineLarge),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  slide.body,
+                  style: text.bodyMedium
+                      ?.merge(AppTextStyles.lead)
+                      .copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.group),
-          Semantics(
-            header: true,
-            child: Text(slide.title, style: text.headlineLarge),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            slide.body,
-            style: text.bodyMedium
-                ?.merge(AppTextStyles.lead)
-                .copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +6,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/dates.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_chip.dart';
@@ -22,6 +22,7 @@ import '../../booking/domain/booking.dart';
 import '../../booking/presentation/sewa_refresh.dart';
 import '../data/review_providers.dart';
 import '../domain/review.dart';
+import '../../../core/constants/app_strings.dart';
 
 class RatingPage extends ConsumerStatefulWidget {
   const RatingPage({super.key, required this.bookingId});
@@ -67,7 +68,7 @@ class _RatingPageState extends ConsumerState<RatingPage> {
           );
       ref.refreshSewa();
       ref.read(authControllerProvider.notifier).refresh();
-      HapticFeedback.lightImpact();
+      hapticAksiPenting();
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
@@ -87,7 +88,7 @@ class _RatingPageState extends ConsumerState<RatingPage> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = 'Koneksi lagi putus. Coba lagi ya.';
+          _error = AppTeks.koneksiPutus;
         });
       }
     }
@@ -103,11 +104,11 @@ class _RatingPageState extends ConsumerState<RatingPage> {
     Widget? bottom;
     final d = detail.value;
     if (detail.hasError || reviewed.hasError) {
-      body = _message(Icons.wifi_off_rounded, 'Koneksi lagi putus. Coba lagi ya.');
+      body = _message(Icons.wifi_off_rounded, AppTeks.koneksiPutus);
     } else if (!detail.hasValue || !reviewed.hasValue) {
       body = const SizedBox.shrink();
     } else if (d == null) {
-      body = _message(Icons.receipt_long_outlined, 'Sewa ini tidak ditemukan.');
+      body = _message(Icons.receipt_long_outlined, AppTeks.sewaTidakDitemukan);
     } else if (d.booking.status != StatusBooking.selesai) {
       body = _message(Icons.hourglass_empty_rounded,
           'Ulasan bisa diberikan setelah sewa selesai.');
@@ -181,7 +182,10 @@ class _RatingPageState extends ConsumerState<RatingPage> {
     final scheme = theme.colorScheme;
     final colors = AppColors.of(context);
     final b = d.booking;
-    final tags = sebagaiPenyewa ? tagPenyewaMenilai : tagPemilikMenilai;
+    final tags = [
+      ...(sebagaiPenyewa ? tagPenyewaMenilai : tagPemilikMenilai),
+      if (b.barter) ...tagBarter,
+    ];
     final rentang = formatRentangPendek(b.tanggalMulai, b.tanggalKembali);
 
     return Column(

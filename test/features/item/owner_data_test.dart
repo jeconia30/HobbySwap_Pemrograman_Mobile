@@ -77,7 +77,7 @@ void main() {
       expect(status, {
         carrier: ItemStatus.tersedia,
         switchOled: ItemStatus.disewa,
-        raketYonex: ItemStatus.tersedia,
+        raketYonex: ItemStatus.dibarter, // M11: dibarter dengan Keyboard Sarah
         hammock: ItemStatus.nonaktif,
       });
       final sw = mine.firstWhere((l) => l.item.id == switchOled);

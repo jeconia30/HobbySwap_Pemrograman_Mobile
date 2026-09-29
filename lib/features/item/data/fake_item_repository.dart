@@ -12,6 +12,7 @@ import '../domain/item.dart';
 import '../domain/item_filter.dart';
 import '../domain/item_repository.dart';
 import '../domain/kategori.dart';
+import '../../../core/constants/app_strings.dart';
 
 class FakeItemRepository implements ItemRepository {
   FakeItemRepository({
@@ -41,7 +42,7 @@ class FakeItemRepository implements ItemRepository {
     await Future<void>.delayed(delay);
     if (kDebugMode && debugFailNext) {
       debugFailNext = false;
-      throw const ItemException('Koneksi lagi putus. Coba lagi ya.');
+      throw const ItemException(AppTeks.koneksiPutus);
     }
   }
 
@@ -59,7 +60,7 @@ class FakeItemRepository implements ItemRepository {
 
   User _owner() {
     final user = _accounts.byId(_storage.sessionUserId ?? '')?.user;
-    if (user == null) throw const ItemException('Sesimu habis. Masuk lagi ya.');
+    if (user == null) throw const ItemException(AppTeks.sesiHabis);
     return user;
   }
 
@@ -79,6 +80,7 @@ class FakeItemRepository implements ItemRepository {
     ItemSort sort = ItemSort.terpopuler,
     int? hargaMaks,
     bool hanyaTersedia = false,
+    bool hanyaBarter = false,
   }) async {
     await _wait();
     return applyItemFilter(
@@ -89,6 +91,7 @@ class FakeItemRepository implements ItemRepository {
         sort: sort,
         hargaMaks: hargaMaks,
         hanyaTersedia: hanyaTersedia,
+        hanyaBarter: hanyaBarter,
       ),
       viewerId: _storage.sessionUserId,
     );
@@ -118,7 +121,7 @@ class FakeItemRepository implements ItemRepository {
     await _wait();
     final owner = _owner();
     if (owner.statusVerifikasi != StatusVerifikasi.terverifikasi) {
-      throw const ItemException('Verifikasi KTM dulu, ya.');
+      throw const ItemException(AppTeks.verifikasiDulu);
     }
     final item = Item(
       id: _store.nextId(),
@@ -129,6 +132,7 @@ class FakeItemRepository implements ItemRepository {
       hargaPerHari: input.hargaPerHari,
       daftarFoto: input.daftarFoto,
       lokasiKampus: input.lokasiKampus.trim(),
+      dendaPerHari: input.dendaPerHari,
     );
     _store.add(item);
     return item;
@@ -144,6 +148,7 @@ class FakeItemRepository implements ItemRepository {
       hargaPerHari: input.hargaPerHari,
       daftarFoto: input.daftarFoto,
       lokasiKampus: input.lokasiKampus.trim(),
+      dendaPerHari: input.dendaPerHari,
     ));
   }
 

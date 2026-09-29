@@ -41,7 +41,7 @@ void main() {
     await openBarang(tester);
 
     expect(find.text('Oktober'), findsOneWidget);
-    expect(find.text('Rp320rb'), findsOneWidget);
+    expect(find.text('Rp320.000'), findsOneWidget);
     expect(find.text('12×'), findsOneWidget);
     expect(find.textContaining('4.8', findRichText: true), findsWidgets);
     expect(find.text('Pengajuan baru menunggu'), findsOneWidget);
@@ -62,8 +62,17 @@ void main() {
     expect(
         find.descendant(of: row('itm-016'), matching: find.text('Nonaktif')),
         findsOneWidget);
+    await tester.scrollUntilVisible(row('itm-015'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     expect(
         find.descendant(of: row('itm-013'), matching: find.text('Tersedia')),
+        findsOneWidget);
+    // M11: raket sedang dibarter dengan Keyboard Sarah.
+    expect(
+        find.descendant(
+            of: row('itm-015'),
+            matching: find.text('Dibarter · kembali Rab, 7 Okt')),
         findsOneWidget);
   });
 
@@ -72,7 +81,7 @@ void main() {
     await pumpApp(tester, sessionUserId: gregorian);
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel('Barang, 3 baru'), findsOneWidget);
+    expect(find.bySemanticsLabel('Barang, 4 baru'), findsOneWidget);
   });
 
   testWidgets('Terima Aulia → Sarah otomatis ditolak; tolak Dimas pakai alasan',
@@ -81,7 +90,7 @@ void main() {
     await tester.tap(find.byKey(const Key('pending-card')));
     await tester.pumpAndSettle();
     expect(find.byType(PengajuanMasukPage), findsOneWidget);
-    expect(find.text('Menunggu (3)'), findsOneWidget);
+    expect(find.text('Menunggu (4)'), findsOneWidget);
     expect(find.textContaining('Buat pendakian Sibayak'), findsOneWidget);
 
     await tapVisible(tester, find.byKey(const Key('terima-bkg-005')));
@@ -91,7 +100,13 @@ void main() {
     await waitRepo(tester);
     expect(find.text('Pengajuan diterima. 1 pengajuan lain otomatis ditolak.'),
         findsOneWidget);
-    expect(find.text('Menunggu (1)'), findsOneWidget);
+    // Kepala daftar dibangun malas: gulir ke atas dulu.
+    await tester.scrollUntilVisible(find.text('Menunggu (2)'), -200,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.text('Menunggu (2)'), findsOneWidget);
+    // Tunggu SnackBar hilang supaya tidak menutupi tombol.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
 
     await tapVisible(tester, find.byKey(const Key('tolak-bkg-006')));
     await tester.tap(find.byKey(const Key('tolak-konfirmasi')));
@@ -101,20 +116,32 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const Key('tolak-konfirmasi')));
     await waitRepo(tester);
-    expect(find.text('Menunggu (0)'), findsOneWidget);
-    expect(find.text('Belum ada pengajuan masuk.'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Menunggu (1)'), -200,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.text('Menunggu (1)'), findsOneWidget);
+    // Tinggal tawaran barter Dimas (M11).
+    expect(find.text('Tawaran barter'), findsOneWidget);
 
     await tester.tap(find.text('Riwayat'));
     await tester.pumpAndSettle();
+    // Daftar dibangun malas: gulir sampai kartunya dibangun.
+    Future<void> lihat(String teks) => tester.scrollUntilVisible(
+        find.text(teks), 200,
+        scrollable: find.byType(Scrollable).first);
+    await lihat('Alasan: Barangnya lagi dipakai');
     expect(find.text('Alasan: Barangnya lagi dipakai'), findsOneWidget);
+    await lihat('Alasan: Tanggal sudah diambil penyewa lain');
     expect(find.text('Alasan: Tanggal sudah diambil penyewa lain'),
         findsOneWidget);
     expect(find.text('Disetujui'), findsWidgets);
 
+    await tester.scrollUntilVisible(find.byTooltip('Kembali'), -200,
+        scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byTooltip('Kembali'));
     await waitRepo(tester);
-    expect(find.text('Pengajuan baru menunggu'), findsNothing);
-    expect(find.bySemanticsLabel(RegExp(r'^Barang, \d+ baru$')), findsNothing);
+    // Tinggal tawaran barter Dimas yang menunggu (M11).
+    expect(find.text('Pengajuan baru menunggu'), findsOneWidget);
+    expect(find.bySemanticsLabel('Barang, 1 baru'), findsOneWidget);
   });
 
   testWidgets('Hapus: ditolak kalau ada sewa aktif, berhasil kalau tidak',
@@ -181,8 +208,13 @@ void main() {
     await tester.tap(simpan);
     await tester.pumpAndSettle();
     expect(find.text('Minimal Rp5.000 per hari'), findsOneWidget);
+    expect(find.text('Isi denda atau pilih Tanpa denda'), findsOneWidget);
 
     await tester.enterText(field('form-barang-harga'), '60000');
+    await tester.pump();
+    // Saran denda = 50% harga sewa.
+    await tapVisible(tester, find.byKey(const Key('denda-saran')));
+    expect(find.text('Saran Rp30.000 (50%)'), findsOneWidget);
     await tester.tap(simpan);
     await waitRepo(tester);
 

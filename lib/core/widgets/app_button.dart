@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_press_scale.dart';
 
 /// [danger] hanya untuk konfirmasi aksi yang tidak bisa dibatalkan (hapus, tolak).
 enum AppButtonVariant { primary, secondary, outline, danger }
 
-class AppButton extends StatefulWidget {
+class AppButton extends StatelessWidget {
   const AppButton({
     super.key,
     required this.label,
@@ -15,6 +16,7 @@ class AppButton extends StatefulWidget {
     this.isLoading = false,
     this.icon,
     this.trailingIcon,
+    this.compact = false,
   });
 
   final String label;
@@ -26,12 +28,9 @@ class AppButton extends StatefulWidget {
   final Widget? icon;
   final Widget? trailingIcon;
 
-  @override
-  State<AppButton> createState() => _AppButtonState();
-}
+  /// Tombol kecil (selebar isinya, tinggi 48) untuk di dalam kartu/gelembung.
+  final bool compact;
 
-class _AppButtonState extends State<AppButton> {
-  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,23 +39,23 @@ class _AppButtonState extends State<AppButton> {
     final text = Theme.of(context).textTheme;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
-    final (Color bg, Color fg, BorderSide side) = switch (widget.variant) {
+    final (Color bg, Color fg, BorderSide side) = switch (variant) {
       AppButtonVariant.primary => (scheme.primary, scheme.onPrimary, BorderSide.none),
       AppButtonVariant.secondary => (colors.surfaceAlt, scheme.onSurface, BorderSide.none),
       AppButtonVariant.outline =>
-        (Colors.transparent, scheme.onSurface, BorderSide(color: colors.border, width: 1.5)),
+        (AppPalette.transparent, scheme.onSurface, BorderSide(color: colors.border, width: 1.5)),
       AppButtonVariant.danger => (scheme.error, scheme.onError, BorderSide.none),
     };
 
-    final disabled = widget.onPressed == null;
-    final interactive = !disabled && !widget.isLoading;
+    final disabled = onPressed == null;
+    final interactive = !disabled && !isLoading;
 
     Widget iconOf(Widget icon) => IconTheme.merge(
           data: IconThemeData(color: fg, size: AppSizes.iconSm),
           child: icon,
         );
 
-    final content = widget.isLoading
+    final content = isLoading
         ? SizedBox.square(
             key: const ValueKey('loading'),
             dimension: AppSizes.spinner,
@@ -70,20 +69,21 @@ class _AppButtonState extends State<AppButton> {
             key: const ValueKey('label'),
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.icon != null) ...[
-                iconOf(widget.icon!),
+              if (icon != null) ...[
+                iconOf(icon!),
                 const SizedBox(width: AppSpacing.sm),
               ],
               Flexible(
                 child: Text(
-                  widget.label,
+                  label,
                   overflow: TextOverflow.ellipsis,
-                  style: text.labelLarge?.copyWith(color: fg),
+                  style: (compact ? text.labelMedium : text.labelLarge)
+                      ?.copyWith(color: fg, fontWeight: FontWeight.w700),
                 ),
               ),
-              if (widget.trailingIcon != null) ...[
+              if (trailingIcon != null) ...[
                 const SizedBox(width: AppSpacing.sm),
-                iconOf(widget.trailingIcon!),
+                iconOf(trailingIcon!),
               ],
             ],
           );
@@ -91,14 +91,12 @@ class _AppButtonState extends State<AppButton> {
     return AnimatedOpacity(
       opacity: disabled ? 0.4 : 1,
       duration: reduceMotion ? Duration.zero : AppDurations.short,
-      child: AnimatedScale(
-        scale: _pressed && !reduceMotion ? 0.97 : 1,
-        duration: AppDurations.press,
-        curve: Curves.easeOutCubic,
+      child: AppPressScale(
+        enabled: interactive,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: AppSizes.buttonHeight,
-            minWidth: double.infinity,
+          constraints: BoxConstraints(
+            minHeight: compact ? AppSizes.minTapTarget : AppSizes.buttonHeight,
+            minWidth: compact ? 0 : double.infinity,
           ),
           child: Material(
             color: bg,
@@ -106,14 +104,15 @@ class _AppButtonState extends State<AppButton> {
                 borderRadius: AppRadius.buttonAll, side: side),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: interactive ? widget.onPressed : null,
-              onHighlightChanged: (v) => setState(() => _pressed = v),
+              onTap: interactive ? onPressed : null,
               child: Semantics(
-                label: widget.isLoading ? widget.label : null,
+                label: isLoading ? label : null,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl, vertical: AppSpacing.md),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: compact ? AppSpacing.lg : AppSpacing.xl,
+                      vertical: compact ? AppSpacing.sm : AppSpacing.md),
                   child: Center(
+                    widthFactor: compact ? 1 : null,
                     child: AnimatedSwitcher(
                       duration: reduceMotion ? Duration.zero : AppDurations.short,
                       child: content,

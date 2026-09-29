@@ -2,25 +2,30 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/storage/session_storage.dart';
 import '../../../data/fake/fake_account_store.dart';
+import '../../../data/fake/fake_notification_store.dart';
+import '../../activity/domain/notification_item.dart';
 import '../../auth/domain/user.dart';
 import '../domain/verification_repository.dart';
+import '../../../core/constants/app_strings.dart';
 
 class FakeVerificationRepository implements VerificationRepository {
   FakeVerificationRepository({
     required this._storage,
     required this._store,
+    this._notifications,
     this.delay = const Duration(milliseconds: 1200),
   });
 
   final SessionStorage _storage;
   final FakeAccountStore _store;
+  final FakeNotificationStore? _notifications;
   final Duration delay;
 
   User _sessionUser() {
     final id = _storage.sessionUserId;
     final account = id == null ? null : _store.byId(id);
     if (account == null) {
-      throw const VerificationException('Sesimu habis. Masuk lagi ya.');
+      throw const VerificationException(AppTeks.sesiHabis);
     }
     return account.user;
   }
@@ -46,9 +51,17 @@ class FakeVerificationRepository implements VerificationRepository {
   Future<StatusVerifikasi> debugApprove() async {
     if (!kDebugMode) throw UnsupportedError('debugApprove hanya untuk debug');
     final user = _sessionUser();
-    return _store
+    final status = _store
         .updateUser(
             user.copyWith(statusVerifikasi: StatusVerifikasi.terverifikasi))
         .statusVerifikasi;
+    _notifications?.kirim(
+      userId: user.id,
+      tipe: TipeNotifikasi.verifikasiDisetujui,
+      judul: 'Akunmu sudah terverifikasi',
+      isi: 'Sekarang kamu bisa sewa dan menyewakan barang di HobbySwap.',
+      tautan: '/beranda',
+    );
+    return status;
   }
 }

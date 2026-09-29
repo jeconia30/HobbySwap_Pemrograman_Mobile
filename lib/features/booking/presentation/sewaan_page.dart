@@ -7,6 +7,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formatters.dart';
@@ -18,6 +19,7 @@ import '../../../core/widgets/app_error_banner.dart';
 import '../../../core/widgets/app_icon_tile_button.dart';
 import '../../../core/widgets/app_segmented_control.dart';
 import '../../../core/widgets/dashed_border.dart';
+import '../../../core/widgets/app_press_scale.dart';
 import '../../../core/widgets/item_card.dart';
 import '../../../core/widgets/item_thumb.dart';
 import '../../../core/widgets/status_badge.dart';
@@ -26,7 +28,12 @@ import '../data/booking_providers.dart';
 import '../domain/booking.dart';
 import '../domain/booking_repository.dart';
 import '../domain/booking_rules.dart';
+import 'batal_sewa_sheet.dart';
 import 'sewa_refresh.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../chat/presentation/chat_open.dart';
+import 'barter_widgets.dart';
+import '../../auth/presentation/auth_controller.dart';
 
 enum SewaanTab { aktif, menunggu, riwayat }
 
@@ -57,6 +64,37 @@ class _SewaanPageState extends ConsumerState<SewaanPage> {
         ref.refresh(myBookingsProvider.future),
         ref.refresh(myReviewedBookingIdsProvider.future),
       ]).then<void>((_) {}, onError: (Object _) {});
+
+  Future<void> _batalkanSewa(BookingDetail d, DateTime today) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showBatalSewaSheet(
+      context,
+      detail: d,
+      hariIni: today,
+      sebagaiPemilik: ref.read(authControllerProvider)?.id == d.pemilik.id,
+    );
+    if (ok) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Sewa dibatalkan.')));
+    }
+  }
+
+  Future<void> _setujuCounter(BookingDetail d) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(bookingRepositoryProvider).setujuiCounter(d.booking.id);
+      hapticAksiPenting();
+      ref.refreshSewa();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Barter disepakati!')));
+    } on BookingException catch (e) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
 
   Future<void> _batalkan(BookingDetail d) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -102,15 +140,19 @@ class _SewaanPageState extends ConsumerState<SewaanPage> {
       content = [
         padded(AppEmptyState(
           icon: Icons.wifi_off_rounded,
-          title: 'Koneksi lagi putus. Coba lagi ya.',
-          actionLabel: 'Coba lagi',
+          title: AppTeks.koneksiPutus,
+          actionLabel: AppTeks.cobaLagi,
           onAction: () => ref.invalidate(myBookingsProvider),
         )),
       ];
     } else if (!bookings.hasValue || !reviewed.hasValue) {
       content = [
         padded(Skeletonizer(
-          child: _ActiveCard(detail: _placeholder, today: today),
+          child: _ActiveCard(
+            detail: _placeholder,
+            today: today,
+            onBatalkanSewa: () {},
+          ),
         )),
       ];
     } else {
@@ -123,11 +165,20 @@ class _SewaanPageState extends ConsumerState<SewaanPage> {
       ];
       final cards = switch (_tab) {
         SewaanTab.aktif => [
-            for (final d in aktif) _ActiveCard(detail: d, today: today),
+            for (final d in aktif)
+              _ActiveCard(
+                detail: d,
+                today: today,
+                onBatalkanSewa: () => _batalkanSewa(d, today),
+              ),
           ],
         SewaanTab.menunggu => [
             for (final d in menunggu)
-              _CompactCard(detail: d, onBatalkan: () => _batalkan(d)),
+              _CompactCard(
+                detail: d,
+                onBatalkan: () => _batalkan(d),
+                onSetujuCounter: () => _setujuCounter(d),
+              ),
           ],
         SewaanTab.riwayat => [
             for (final d in perluRating) _RatingPromptCard(detail: d),
@@ -242,6 +293,12 @@ String _sub(BookingDetail d) =>
     '${formatRentangPendek(d.booking.tanggalMulai, d.booking.tanggalKembali)}'
     ' · dari ${namaPendek(d.pemilik.nama)}';
 
+/// Id user yang sedang masuk (sudut pandang kartu barter).
+String? _saya(BuildContext context) =>
+    ProviderScope.containerOf(context, listen: false)
+        .read(authControllerProvider)
+        ?.id;
+
 class _CardHeader extends StatelessWidget {
   const _CardHeader({required this.detail, required this.thumb});
 
@@ -251,18 +308,32 @@ class _CardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final b = detail.booking;
+    final tawaran = detail.itemTawaran;
+    final barter = b.barter && tawaran != null;
+    // Barter: yang kupinjam di atas, yang kupinjamkan di bawah.
+    final sayaPengaju = _saya(context) == detail.penyewa.id;
+    final pinjam = !barter || sayaPengaju ? detail.item : tawaran;
+    final pinjamkan = !barter || sayaPengaju ? tawaran : detail.item;
+    final lawan = sayaPengaju ? detail.pemilik : detail.penyewa;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ItemThumb(
-            kategori: detail.item.kategori, size: thumb, radius: AppRadius.note),
+        if (barter)
+          BarterTileTumpuk(atas: pinjam, bawah: pinjamkan!, size: thumb)
+        else
+          ItemThumb(
+              kategori: detail.item.kategori,
+              size: thumb,
+              radius: AppRadius.note),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                detail.item.judul,
+                pinjam.judul,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleMedium
@@ -270,12 +341,25 @@ class _CardHeader extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs / 2),
               Text(
-                _sub(detail),
+                barter
+                    ? '${formatRentangPendek(b.tanggalMulai, b.tanggalKembali)}'
+                        ' · ditukar ${pinjamkan!.judul} dengan '
+                        '${namaPendek(lawan.nama)}'
+                    : _sub(detail),
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpacing.sm),
-              StatusBadge(detail.booking.status),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  if (barter) const BarterChip('Barter'),
+                  StatusBadge(b.status),
+                  if (!b.barter && _perluBayar(b.status))
+                    BayarBadge(b.statusBayar),
+                ],
+              ),
             ],
           ),
         ),
@@ -284,11 +368,22 @@ class _CardHeader extends StatelessWidget {
   }
 }
 
+/// Status sewa yang menampilkan badge pembayaran COD.
+bool _perluBayar(StatusBooking s) =>
+    s == StatusBooking.disetujui ||
+    s == StatusBooking.berlangsung ||
+    s == StatusBooking.selesai;
+
 class _ActiveCard extends StatelessWidget {
-  const _ActiveCard({required this.detail, required this.today});
+  const _ActiveCard({
+    required this.detail,
+    required this.today,
+    required this.onBatalkanSewa,
+  });
 
   final BookingDetail detail;
   final DateTime today;
+  final VoidCallback onBatalkanSewa;
 
   @override
   Widget build(BuildContext context) {
@@ -301,6 +396,11 @@ class _ActiveCard extends StatelessWidget {
     final terlambat = sisa < 0;
     final progres =
         terlambat ? 1.0 : progresSewa(b.tanggalMulai, b.tanggalKembali, today);
+    final denda = hitungDenda(
+      tanggalKembali: b.tanggalKembali,
+      hariKembali: today,
+      dendaPerHari: detail.item.dendaPerHari,
+    );
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.cardCompact),
@@ -354,6 +454,16 @@ class _ActiveCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (berlangsung && denda.total > 0) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Denda sementara ${formatRupiah(denda.total)} '
+                '(${denda.hari} hari)',
+                key: Key('denda-sementara-${b.id}'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.error, fontWeight: FontWeight.w700),
+              ),
+            ],
           ],
           const SizedBox(height: AppSpacing.cardCompact),
           Row(
@@ -371,16 +481,28 @@ class _ActiveCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               AppIconTileButton(
                 icon: Icons.chat_bubble_outline_rounded,
-                tooltip: 'Chat ${detail.pemilik.nama}',
+                tooltip: 'Chat ${detail.lawanDari(_saya(context) ?? '').nama}',
                 size: AppSizes.chatButtonLg,
                 backgroundColor: colors.surfaceAlt,
-                onPressed: () => ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                      const SnackBar(content: Text('Chat segera hadir'))),
+                onPressed: () => bukaObrolan(
+                  context,
+                  otherUserId: detail.lawanDari(_saya(context) ?? '').id,
+                  itemId: detail.item.id,
+                  bookingId: b.id,
+                ),
               ),
             ],
           ),
+          if (b.status == StatusBooking.disetujui)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                key: Key('batalkan-sewa-${b.id}'),
+                onPressed: onBatalkanSewa,
+                style: TextButton.styleFrom(foregroundColor: scheme.error),
+                child: const Text('Batalkan sewa'),
+              ),
+            ),
         ],
       ),
     );
@@ -388,10 +510,17 @@ class _ActiveCard extends StatelessWidget {
 }
 
 class _CompactCard extends StatelessWidget {
-  const _CompactCard({required this.detail, this.onBatalkan});
+  const _CompactCard({
+    required this.detail,
+    this.onBatalkan,
+    this.onSetujuCounter,
+  });
 
   final BookingDetail detail;
   final VoidCallback? onBatalkan;
+
+  /// Barter: pengaju menyetujui barang lain yang diminta pemilik.
+  final VoidCallback? onSetujuCounter;
 
   @override
   Widget build(BuildContext context) {
@@ -404,6 +533,26 @@ class _CompactCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardHeader(detail: detail, thumb: AppSizes.countBox),
+          if (b.perluTanggapanPengaju && onSetujuCounter != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Pemilik meminta ${detail.itemTawaran?.judul ?? 'barang lain'} '
+              'sebagai gantinya. Setuju?',
+              key: Key('counter-${b.id}'),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppButton(
+                key: Key('setuju-counter-${b.id}'),
+                label: 'Setuju',
+                compact: true,
+                onPressed: onSetujuCounter,
+              ),
+            ),
+          ],
           if (b.status == StatusBooking.ditolak && b.alasanTolak != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -436,7 +585,7 @@ class _RatingPromptCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
-    return DashedBorder(
+    final row = DashedBorder(
       radius: AppRadius.card,
       color: colors.warning,
       child: Material(
@@ -481,6 +630,7 @@ class _RatingPromptCard extends StatelessWidget {
         ),
       ),
     );
+    return AppPressScale(child: row);
   }
 }
 
@@ -521,7 +671,7 @@ class _CancelSheetState extends ConsumerState<_CancelSheet> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = 'Koneksi lagi putus. Coba lagi ya.';
+          _error = AppTeks.koneksiPutus;
         });
       }
     }

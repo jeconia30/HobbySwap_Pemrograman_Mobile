@@ -292,7 +292,9 @@ as String?,
 /// @nodoc
 mixin _$HandoverChecklist {
 
- String get bookingId; TahapChecklist get tahap; List<KondisiItem> get daftarKondisi; bool get disetujuiPemilik; bool get disetujuiPenyewa; String? get catatan; DateTime? get disetujuiPemilikPada; DateTime? get disetujuiPenyewaPada;
+ String get bookingId; TahapChecklist get tahap;/// Barang yang dicek. `null` = barang utama sewa; untuk barter, barang
+/// tawaran punya checklist sendiri (M11).
+ String? get itemId; List<KondisiItem> get daftarKondisi; bool get disetujuiPemilik; bool get disetujuiPenyewa; String? get catatan; DateTime? get disetujuiPemilikPada; DateTime? get disetujuiPenyewaPada;
 /// Create a copy of HandoverChecklist
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -306,20 +308,20 @@ $HandoverChecklistCopyWith<HandoverChecklist> get copyWith => _$HandoverChecklis
 @override
 bool operator ==(Object other) {
   final _this = this as HandoverChecklist;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HandoverChecklist&&(identical(other.bookingId, _this.bookingId) || other.bookingId == _this.bookingId)&&(identical(other.tahap, _this.tahap) || other.tahap == _this.tahap)&&const DeepCollectionEquality().equals(other.daftarKondisi, _this.daftarKondisi)&&(identical(other.disetujuiPemilik, _this.disetujuiPemilik) || other.disetujuiPemilik == _this.disetujuiPemilik)&&(identical(other.disetujuiPenyewa, _this.disetujuiPenyewa) || other.disetujuiPenyewa == _this.disetujuiPenyewa)&&(identical(other.catatan, _this.catatan) || other.catatan == _this.catatan)&&(identical(other.disetujuiPemilikPada, _this.disetujuiPemilikPada) || other.disetujuiPemilikPada == _this.disetujuiPemilikPada)&&(identical(other.disetujuiPenyewaPada, _this.disetujuiPenyewaPada) || other.disetujuiPenyewaPada == _this.disetujuiPenyewaPada));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HandoverChecklist&&(identical(other.bookingId, _this.bookingId) || other.bookingId == _this.bookingId)&&(identical(other.tahap, _this.tahap) || other.tahap == _this.tahap)&&(identical(other.itemId, _this.itemId) || other.itemId == _this.itemId)&&const DeepCollectionEquality().equals(other.daftarKondisi, _this.daftarKondisi)&&(identical(other.disetujuiPemilik, _this.disetujuiPemilik) || other.disetujuiPemilik == _this.disetujuiPemilik)&&(identical(other.disetujuiPenyewa, _this.disetujuiPenyewa) || other.disetujuiPenyewa == _this.disetujuiPenyewa)&&(identical(other.catatan, _this.catatan) || other.catatan == _this.catatan)&&(identical(other.disetujuiPemilikPada, _this.disetujuiPemilikPada) || other.disetujuiPemilikPada == _this.disetujuiPemilikPada)&&(identical(other.disetujuiPenyewaPada, _this.disetujuiPenyewaPada) || other.disetujuiPenyewaPada == _this.disetujuiPenyewaPada));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as HandoverChecklist;
-  return Object.hash(runtimeType,_this.bookingId,_this.tahap,const DeepCollectionEquality().hash(_this.daftarKondisi),_this.disetujuiPemilik,_this.disetujuiPenyewa,_this.catatan,_this.disetujuiPemilikPada,_this.disetujuiPenyewaPada);
+  return Object.hash(runtimeType,_this.bookingId,_this.tahap,_this.itemId,const DeepCollectionEquality().hash(_this.daftarKondisi),_this.disetujuiPemilik,_this.disetujuiPenyewa,_this.catatan,_this.disetujuiPemilikPada,_this.disetujuiPenyewaPada);
 }
 
 @override
 String toString() {
   final _this = this as HandoverChecklist;
-  return 'HandoverChecklist(bookingId: ${_this.bookingId}, tahap: ${_this.tahap}, daftarKondisi: ${_this.daftarKondisi}, disetujuiPemilik: ${_this.disetujuiPemilik}, disetujuiPenyewa: ${_this.disetujuiPenyewa}, catatan: ${_this.catatan}, disetujuiPemilikPada: ${_this.disetujuiPemilikPada}, disetujuiPenyewaPada: ${_this.disetujuiPenyewaPada})';
+  return 'HandoverChecklist(bookingId: ${_this.bookingId}, tahap: ${_this.tahap}, itemId: ${_this.itemId}, daftarKondisi: ${_this.daftarKondisi}, disetujuiPemilik: ${_this.disetujuiPemilik}, disetujuiPenyewa: ${_this.disetujuiPenyewa}, catatan: ${_this.catatan}, disetujuiPemilikPada: ${_this.disetujuiPemilikPada}, disetujuiPenyewaPada: ${_this.disetujuiPenyewaPada})';
 }
 
 
@@ -330,7 +332,7 @@ abstract mixin class $HandoverChecklistCopyWith<$Res>  {
   factory $HandoverChecklistCopyWith(HandoverChecklist value, $Res Function(HandoverChecklist) _then) = _$HandoverChecklistCopyWithImpl;
 @useResult
 $Res call({
- String bookingId, TahapChecklist tahap, List<KondisiItem> daftarKondisi, bool disetujuiPemilik, bool disetujuiPenyewa, String? catatan, DateTime? disetujuiPemilikPada, DateTime? disetujuiPenyewaPada
+ String bookingId, TahapChecklist tahap, String? itemId, List<KondisiItem> daftarKondisi, bool disetujuiPemilik, bool disetujuiPenyewa, String? catatan, DateTime? disetujuiPemilikPada, DateTime? disetujuiPenyewaPada
 });
 
 
@@ -347,11 +349,12 @@ class _$HandoverChecklistCopyWithImpl<$Res>
 
 /// Create a copy of HandoverChecklist
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? bookingId = null,Object? tahap = null,Object? daftarKondisi = null,Object? disetujuiPemilik = null,Object? disetujuiPenyewa = null,Object? catatan = freezed,Object? disetujuiPemilikPada = freezed,Object? disetujuiPenyewaPada = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? bookingId = null,Object? tahap = null,Object? itemId = freezed,Object? daftarKondisi = null,Object? disetujuiPemilik = null,Object? disetujuiPenyewa = null,Object? catatan = freezed,Object? disetujuiPemilikPada = freezed,Object? disetujuiPenyewaPada = freezed,}) {
   return _then(HandoverChecklist(
 bookingId: null == bookingId ? _self.bookingId : bookingId // ignore: cast_nullable_to_non_nullable
 as String,tahap: null == tahap ? _self.tahap : tahap // ignore: cast_nullable_to_non_nullable
-as TahapChecklist,daftarKondisi: null == daftarKondisi ? _self.daftarKondisi : daftarKondisi // ignore: cast_nullable_to_non_nullable
+as TahapChecklist,itemId: freezed == itemId ? _self.itemId : itemId // ignore: cast_nullable_to_non_nullable
+as String?,daftarKondisi: null == daftarKondisi ? _self.daftarKondisi : daftarKondisi // ignore: cast_nullable_to_non_nullable
 as List<KondisiItem>,disetujuiPemilik: null == disetujuiPemilik ? _self.disetujuiPemilik : disetujuiPemilik // ignore: cast_nullable_to_non_nullable
 as bool,disetujuiPenyewa: null == disetujuiPenyewa ? _self.disetujuiPenyewa : disetujuiPenyewa // ignore: cast_nullable_to_non_nullable
 as bool,catatan: freezed == catatan ? _self.catatan : catatan // ignore: cast_nullable_to_non_nullable
@@ -442,10 +445,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String bookingId,  TahapChecklist tahap,  List<KondisiItem> daftarKondisi,  bool disetujuiPemilik,  bool disetujuiPenyewa,  String? catatan,  DateTime? disetujuiPemilikPada,  DateTime? disetujuiPenyewaPada)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String bookingId,  TahapChecklist tahap,  String? itemId,  List<KondisiItem> daftarKondisi,  bool disetujuiPemilik,  bool disetujuiPenyewa,  String? catatan,  DateTime? disetujuiPemilikPada,  DateTime? disetujuiPenyewaPada)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HandoverChecklist() when $default != null:
-return $default(_that.bookingId,_that.tahap,_that.daftarKondisi,_that.disetujuiPemilik,_that.disetujuiPenyewa,_that.catatan,_that.disetujuiPemilikPada,_that.disetujuiPenyewaPada);case _:
+return $default(_that.bookingId,_that.tahap,_that.itemId,_that.daftarKondisi,_that.disetujuiPemilik,_that.disetujuiPenyewa,_that.catatan,_that.disetujuiPemilikPada,_that.disetujuiPenyewaPada);case _:
   return orElse();
 
 }
@@ -463,10 +466,10 @@ return $default(_that.bookingId,_that.tahap,_that.daftarKondisi,_that.disetujuiP
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String bookingId,  TahapChecklist tahap,  List<KondisiItem> daftarKondisi,  bool disetujuiPemilik,  bool disetujuiPenyewa,  String? catatan,  DateTime? disetujuiPemilikPada,  DateTime? disetujuiPenyewaPada)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String bookingId,  TahapChecklist tahap,  String? itemId,  List<KondisiItem> daftarKondisi,  bool disetujuiPemilik,  bool disetujuiPenyewa,  String? catatan,  DateTime? disetujuiPemilikPada,  DateTime? disetujuiPenyewaPada)  $default,) {final _that = this;
 switch (_that) {
 case _HandoverChecklist():
-return $default(_that.bookingId,_that.tahap,_that.daftarKondisi,_that.disetujuiPemilik,_that.disetujuiPenyewa,_that.catatan,_that.disetujuiPemilikPada,_that.disetujuiPenyewaPada);case _:
+return $default(_that.bookingId,_that.tahap,_that.itemId,_that.daftarKondisi,_that.disetujuiPemilik,_that.disetujuiPenyewa,_that.catatan,_that.disetujuiPemilikPada,_that.disetujuiPenyewaPada);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -483,10 +486,10 @@ return $default(_that.bookingId,_that.tahap,_that.daftarKondisi,_that.disetujuiP
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String bookingId,  TahapChecklist tahap,  List<KondisiItem> daftarKondisi,  bool disetujuiPemilik,  bool disetujuiPenyewa,  String? catatan,  DateTime? disetujuiPemilikPada,  DateTime? disetujuiPenyewaPada)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String bookingId,  TahapChecklist tahap,  String? itemId,  List<KondisiItem> daftarKondisi,  bool disetujuiPemilik,  bool disetujuiPenyewa,  String? catatan,  DateTime? disetujuiPemilikPada,  DateTime? disetujuiPenyewaPada)?  $default,) {final _that = this;
 switch (_that) {
 case _HandoverChecklist() when $default != null:
-return $default(_that.bookingId,_that.tahap,_that.daftarKondisi,_that.disetujuiPemilik,_that.disetujuiPenyewa,_that.catatan,_that.disetujuiPemilikPada,_that.disetujuiPenyewaPada);case _:
+return $default(_that.bookingId,_that.tahap,_that.itemId,_that.daftarKondisi,_that.disetujuiPemilik,_that.disetujuiPenyewa,_that.catatan,_that.disetujuiPemilikPada,_that.disetujuiPenyewaPada);case _:
   return null;
 
 }
@@ -498,11 +501,14 @@ return $default(_that.bookingId,_that.tahap,_that.daftarKondisi,_that.disetujuiP
 @JsonSerializable()
 
 class _HandoverChecklist extends HandoverChecklist {
-  const _HandoverChecklist({required this.bookingId, required this.tahap,  List<KondisiItem> daftarKondisi = const <KondisiItem>[], this.disetujuiPemilik = false, this.disetujuiPenyewa = false, this.catatan, this.disetujuiPemilikPada, this.disetujuiPenyewaPada}): _daftarKondisi = daftarKondisi,super._();
+  const _HandoverChecklist({required this.bookingId, required this.tahap, this.itemId,  List<KondisiItem> daftarKondisi = const <KondisiItem>[], this.disetujuiPemilik = false, this.disetujuiPenyewa = false, this.catatan, this.disetujuiPemilikPada, this.disetujuiPenyewaPada}): _daftarKondisi = daftarKondisi,super._();
   factory _HandoverChecklist.fromJson(Map<String, dynamic> json) => _$HandoverChecklistFromJson(json);
 
 @override final  String bookingId;
 @override final  TahapChecklist tahap;
+/// Barang yang dicek. `null` = barang utama sewa; untuk barter, barang
+/// tawaran punya checklist sendiri (M11).
+@override final  String? itemId;
  final  List<KondisiItem> _daftarKondisi;
 @override@JsonKey() List<KondisiItem> get daftarKondisi {
   if (_daftarKondisi is EqualUnmodifiableListView) return _daftarKondisi;
@@ -529,18 +535,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _HandoverChecklist&&(identical(other.bookingId, bookingId) || other.bookingId == bookingId)&&(identical(other.tahap, tahap) || other.tahap == tahap)&&const DeepCollectionEquality().equals(other.daftarKondisi, _daftarKondisi)&&(identical(other.disetujuiPemilik, disetujuiPemilik) || other.disetujuiPemilik == disetujuiPemilik)&&(identical(other.disetujuiPenyewa, disetujuiPenyewa) || other.disetujuiPenyewa == disetujuiPenyewa)&&(identical(other.catatan, catatan) || other.catatan == catatan)&&(identical(other.disetujuiPemilikPada, disetujuiPemilikPada) || other.disetujuiPemilikPada == disetujuiPemilikPada)&&(identical(other.disetujuiPenyewaPada, disetujuiPenyewaPada) || other.disetujuiPenyewaPada == disetujuiPenyewaPada));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _HandoverChecklist&&(identical(other.bookingId, bookingId) || other.bookingId == bookingId)&&(identical(other.tahap, tahap) || other.tahap == tahap)&&(identical(other.itemId, itemId) || other.itemId == itemId)&&const DeepCollectionEquality().equals(other.daftarKondisi, _daftarKondisi)&&(identical(other.disetujuiPemilik, disetujuiPemilik) || other.disetujuiPemilik == disetujuiPemilik)&&(identical(other.disetujuiPenyewa, disetujuiPenyewa) || other.disetujuiPenyewa == disetujuiPenyewa)&&(identical(other.catatan, catatan) || other.catatan == catatan)&&(identical(other.disetujuiPemilikPada, disetujuiPemilikPada) || other.disetujuiPemilikPada == disetujuiPemilikPada)&&(identical(other.disetujuiPenyewaPada, disetujuiPenyewaPada) || other.disetujuiPenyewaPada == disetujuiPenyewaPada));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,bookingId,tahap,const DeepCollectionEquality().hash(_daftarKondisi),disetujuiPemilik,disetujuiPenyewa,catatan,disetujuiPemilikPada,disetujuiPenyewaPada);
+    return Object.hash(runtimeType,bookingId,tahap,itemId,const DeepCollectionEquality().hash(_daftarKondisi),disetujuiPemilik,disetujuiPenyewa,catatan,disetujuiPemilikPada,disetujuiPenyewaPada);
 }
 
 @override
 String toString() {
-    return 'HandoverChecklist(bookingId: $bookingId, tahap: $tahap, daftarKondisi: $daftarKondisi, disetujuiPemilik: $disetujuiPemilik, disetujuiPenyewa: $disetujuiPenyewa, catatan: $catatan, disetujuiPemilikPada: $disetujuiPemilikPada, disetujuiPenyewaPada: $disetujuiPenyewaPada)';
+    return 'HandoverChecklist(bookingId: $bookingId, tahap: $tahap, itemId: $itemId, daftarKondisi: $daftarKondisi, disetujuiPemilik: $disetujuiPemilik, disetujuiPenyewa: $disetujuiPenyewa, catatan: $catatan, disetujuiPemilikPada: $disetujuiPemilikPada, disetujuiPenyewaPada: $disetujuiPenyewaPada)';
 }
 
 
@@ -551,7 +557,7 @@ abstract mixin class _$HandoverChecklistCopyWith<$Res> implements $HandoverCheck
   factory _$HandoverChecklistCopyWith(_HandoverChecklist value, $Res Function(_HandoverChecklist) _then) = __$HandoverChecklistCopyWithImpl;
 @override @useResult
 $Res call({
- String bookingId, TahapChecklist tahap, List<KondisiItem> daftarKondisi, bool disetujuiPemilik, bool disetujuiPenyewa, String? catatan, DateTime? disetujuiPemilikPada, DateTime? disetujuiPenyewaPada
+ String bookingId, TahapChecklist tahap, String? itemId, List<KondisiItem> daftarKondisi, bool disetujuiPemilik, bool disetujuiPenyewa, String? catatan, DateTime? disetujuiPemilikPada, DateTime? disetujuiPenyewaPada
 });
 
 
@@ -568,11 +574,12 @@ class __$HandoverChecklistCopyWithImpl<$Res>
 
 /// Create a copy of HandoverChecklist
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? bookingId = null,Object? tahap = null,Object? daftarKondisi = null,Object? disetujuiPemilik = null,Object? disetujuiPenyewa = null,Object? catatan = freezed,Object? disetujuiPemilikPada = freezed,Object? disetujuiPenyewaPada = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? bookingId = null,Object? tahap = null,Object? itemId = freezed,Object? daftarKondisi = null,Object? disetujuiPemilik = null,Object? disetujuiPenyewa = null,Object? catatan = freezed,Object? disetujuiPemilikPada = freezed,Object? disetujuiPenyewaPada = freezed,}) {
   return _then(_HandoverChecklist(
 bookingId: null == bookingId ? _self.bookingId : bookingId // ignore: cast_nullable_to_non_nullable
 as String,tahap: null == tahap ? _self.tahap : tahap // ignore: cast_nullable_to_non_nullable
-as TahapChecklist,daftarKondisi: null == daftarKondisi ? _self._daftarKondisi : daftarKondisi // ignore: cast_nullable_to_non_nullable
+as TahapChecklist,itemId: freezed == itemId ? _self.itemId : itemId // ignore: cast_nullable_to_non_nullable
+as String?,daftarKondisi: null == daftarKondisi ? _self._daftarKondisi : daftarKondisi // ignore: cast_nullable_to_non_nullable
 as List<KondisiItem>,disetujuiPemilik: null == disetujuiPemilik ? _self.disetujuiPemilik : disetujuiPemilik // ignore: cast_nullable_to_non_nullable
 as bool,disetujuiPenyewa: null == disetujuiPenyewa ? _self.disetujuiPenyewa : disetujuiPenyewa // ignore: cast_nullable_to_non_nullable
 as bool,catatan: freezed == catatan ? _self.catatan : catatan // ignore: cast_nullable_to_non_nullable

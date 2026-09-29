@@ -66,6 +66,9 @@ const tagPemilikMenilai = [
   'Ramah',
 ];
 
+/// Tag tambahan untuk barter (M11), dipakai kedua pihak.
+const tagBarter = ['Barangnya terawat', 'Tukar yang adil'];
+
 const minimalCeritaBintangRendah = 10;
 
 /// Pesan error cerita, atau `null` bila boleh dikirim.

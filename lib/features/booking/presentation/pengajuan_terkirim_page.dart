@@ -19,6 +19,7 @@ import '../../item/domain/item.dart';
 import '../data/booking_providers.dart';
 import '../domain/booking.dart';
 import '../domain/booking_rules.dart';
+import '../../../core/constants/app_strings.dart';
 
 class PengajuanTerkirimPage extends ConsumerWidget {
   const PengajuanTerkirimPage({super.key, required this.bookingId});
@@ -51,8 +52,8 @@ class PengajuanTerkirimPage extends ConsumerWidget {
         padding: const EdgeInsets.only(top: AppSpacing.xxxl),
         child: AppEmptyState(
           icon: Icons.wifi_off_rounded,
-          title: 'Koneksi lagi putus. Coba lagi ya.',
-          actionLabel: 'Coba lagi',
+          title: AppTeks.koneksiPutus,
+          actionLabel: AppTeks.cobaLagi,
           onAction: () => ref.invalidate(myBookingsProvider),
         ),
       );
@@ -133,7 +134,7 @@ class _Body extends StatelessWidget {
           header: true,
           liveRegion: true,
           child: Text(
-            'Pengajuan terkirim!',
+            booking.barter ? 'Tawaran barter terkirim!' : 'Pengajuan terkirim!',
             textAlign: TextAlign.center,
             style: text.headlineMedium,
           ),
@@ -190,9 +191,11 @@ class _Body extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Total', style: muted),
+                      Text(booking.barter ? 'Jenis' : 'Total', style: muted),
                       Text(
-                        formatRupiah(booking.totalHarga),
+                        booking.barter
+                            ? 'Barter · tanpa biaya'
+                            : formatRupiah(booking.totalHarga),
                         style: text.titleMedium?.copyWith(
                           color: colors.accentText,
                           fontWeight: FontWeight.w800,

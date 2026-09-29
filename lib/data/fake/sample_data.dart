@@ -1,7 +1,10 @@
 import '../../core/utils/dates.dart';
+import '../../features/activity/domain/notification_item.dart';
 import '../../features/auth/domain/user.dart';
 import '../../features/booking/domain/booking.dart';
 import '../../features/booking/domain/booking_rules.dart';
+import '../../features/chat/domain/chat_message.dart';
+import '../../features/chat/domain/chat_thread.dart';
 import '../../features/handover/domain/handover_checklist.dart';
 import '../../features/review/domain/review.dart';
 import '../../features/item/domain/item.dart';
@@ -24,7 +27,10 @@ const sampleAccounts = <SampleAccount>[
       nama: 'Gregorian',
       nim: '220401087',
       email: 'gregorian@students.usu.ac.id',
-      fakultas: 'Fasilkom-TI',
+      fakultas: 'Teknik',
+      prodi: 'Teknik Mesin',
+      bio: 'Suka naik gunung dan main game. Barangku selalu kurawat.',
+      warnaAvatar: WarnaAvatar.hijau,
       statusVerifikasi: StatusVerifikasi.terverifikasi,
       rating: 4.8,
       jumlahUlasan: 12,
@@ -38,6 +44,8 @@ const sampleAccounts = <SampleAccount>[
       nim: '220402011',
       email: 'aulia@students.usu.ac.id',
       fakultas: 'FISIP',
+      prodi: 'Ilmu Komunikasi',
+      warnaAvatar: WarnaAvatar.ungu,
     ),
     password: _demoPassword,
   ),
@@ -47,7 +55,10 @@ const sampleAccounts = <SampleAccount>[
       nama: 'Rizky Nugraha',
       nim: '210401034',
       email: 'rizky@students.usu.ac.id',
-      fakultas: 'FT USU',
+      fakultas: 'Teknik',
+      prodi: 'Teknik Sipil',
+      bio: 'Fotografer acara kampus. Kamera selalu dicek sebelum disewakan.',
+      warnaAvatar: WarnaAvatar.biru,
       statusVerifikasi: StatusVerifikasi.terverifikasi,
       rating: 4.9,
       jumlahUlasan: 41,
@@ -61,6 +72,8 @@ const sampleAccounts = <SampleAccount>[
       nim: '210903052',
       email: 'sarah@students.usu.ac.id',
       fakultas: 'FISIP',
+      prodi: 'Hubungan Internasional',
+      warnaAvatar: WarnaAvatar.bata,
       statusVerifikasi: StatusVerifikasi.terverifikasi,
       rating: 4.8,
       jumlahUlasan: 36,
@@ -74,6 +87,8 @@ const sampleAccounts = <SampleAccount>[
       nim: '220503019',
       email: 'dimas@students.usu.ac.id',
       fakultas: 'FEB',
+      prodi: 'Manajemen',
+      warnaAvatar: WarnaAvatar.coklat,
       statusVerifikasi: StatusVerifikasi.terverifikasi,
       rating: 4.7,
       jumlahUlasan: 18,
@@ -267,14 +282,32 @@ RentangTanggal _rentang(DateTime today, (int, int) r) => RentangTanggal(
     );
 
 /// [sampleItems] dengan `rentangTidakTersedia` terisi relatif ke [today].
+/// Barang contoh tanpa denda keterlambatan (sisanya 50% harga sewa).
+const _tanpaDenda = {'itm-006', 'itm-011', 'itm-016'};
+
+/// Barang contoh yang menerima barter (M11) beserta kategori yang dicari.
+const _minatBarter = <String, List<Kategori>>{
+  'itm-001': [Kategori.camping], // Sony (Rizky)
+  'itm-004': [Kategori.kamera, Kategori.game], // Tenda (Sarah)
+  'itm-009': [Kategori.olahraga], // Stik PS5 (Rizky)
+  'itm-012': [Kategori.olahraga], // Keyboard Yamaha (Sarah)
+  'itm-013': [Kategori.kamera], // Carrier Eiger (Gregorian)
+};
+
 List<Item> sampleItemsFor(DateTime today) {
   final t = dateOnly(today);
   return [
     for (final item in sampleItems)
-      item.copyWith(rentangTidakTersedia: [
-        for (final r in _blokirPemilik[item.id] ?? const <(int, int)>[])
-          _rentang(t, r),
-      ]),
+      item.copyWith(
+        rentangTidakTersedia: [
+          for (final r in _blokirPemilik[item.id] ?? const <(int, int)>[])
+            _rentang(t, r),
+        ],
+        dendaPerHari:
+            _tanpaDenda.contains(item.id) ? 0 : saranDenda(item.hargaPerHari),
+        bisaBarter: _minatBarter.containsKey(item.id),
+        minatBarter: _minatBarter[item.id] ?? const [],
+      ),
   ];
 }
 
@@ -296,6 +329,9 @@ List<Booking> sampleBookingsFor(DateTime today) {
   }) {
     final item = sampleItems.firstWhere((i) => i.id == itemId);
     n++;
+    // Sewa yang sudah lewat serah terima sudah dibayar COD ke pemilik.
+    final dibayar = status == StatusBooking.berlangsung ||
+        status == StatusBooking.selesai;
     return Booking(
       id: 'bkg-${n.toString().padLeft(3, '0')}',
       itemId: itemId,
@@ -306,6 +342,11 @@ List<Booking> sampleBookingsFor(DateTime today) {
       status: status,
       pesan: pesan,
       dibuatPada: dibuat ?? addDays(mulai, -3),
+      statusBayar: dibayar ? StatusBayar.lunas : StatusBayar.belum,
+      metodeBayar: dibayar
+          ? (n.isEven ? MetodeBayar.transfer : MetodeBayar.tunai)
+          : null,
+      dibayarPada: dibayar ? mulai.add(const Duration(hours: 9)) : null,
     );
   }
 
@@ -367,6 +408,27 @@ List<Booking> sampleBookingsFor(DateTime today) {
     rel('itm-011', aulia, (5, 6), StatusBooking.ditolak, dibuat: -3)
         .copyWith(penyewaId: gregorian, alasanTolak: 'Barang sedang dipakai'),
 
+    // Barter (M11): tawaran masuk ke Gregorian (GoPro Dimas ⇄ Carrier Eiger)
+    // dan barter berlangsung (Raket Gregorian ⇄ Keyboard Sarah).
+    rel('itm-013', dimas, (8, 9), StatusBooking.menunggu,
+            dibuat: 0,
+            pesan: 'GoPro-ku buat dokumentasi, Carrier-mu buat naik '
+                'Sibayak. Tukar pinjam ya, Kak!')
+        .copyWith(
+            jenis: JenisTransaksi.barter,
+            itemTawaranId: 'itm-003',
+            totalHarga: 0),
+    rel('itm-012', sarah, (-1, 2), StatusBooking.berlangsung, dibuat: -5)
+        .copyWith(
+      penyewaId: gregorian,
+      jenis: JenisTransaksi.barter,
+      itemTawaranId: 'itm-015',
+      totalHarga: 0,
+      statusBayar: StatusBayar.belum,
+      metodeBayar: null,
+      dibayarPada: null,
+    ),
+
     // Riwayat lama pemilik lain (sumber ulasan di Detail Barang).
     rel('itm-001', sarah, (-30, -29), StatusBooking.selesai),
     rel('itm-001', dimas, (-50, -48), StatusBooking.selesai),
@@ -388,13 +450,14 @@ Item _itemContoh(String id) => sampleItems.firstWhere((i) => i.id == id);
 /// Checklist contoh yang konsisten dengan status sewa: sewa berlangsung sudah
 /// lewat tahap awal; sewa selesai sudah lewat awal & akhir.
 List<HandoverChecklist> sampleChecklistsFor(List<Booking> bookings) {
-  HandoverChecklist beres(Booking b, TahapChecklist tahap) {
+  HandoverChecklist beres(Booking b, TahapChecklist tahap, {String? itemId}) {
     final tanggal = tahap == TahapChecklist.awal ? b.tanggalMulai : b.tanggalKembali;
     final jam = tahap == TahapChecklist.awal ? 9 : 16;
-    final items = templateChecklist(_itemContoh(b.itemId).kategori);
+    final items = templateChecklist(_itemContoh(itemId ?? b.itemId).kategori);
     return HandoverChecklist(
       bookingId: b.id,
       tahap: tahap,
+      itemId: itemId,
       daftarKondisi: [
         for (final (i, k) in items.indexed)
           k.copyWith(
@@ -410,12 +473,14 @@ List<HandoverChecklist> sampleChecklistsFor(List<Booking> bookings) {
 
   return [
     for (final b in bookings)
-      if (b.status == StatusBooking.berlangsung)
-        beres(b, TahapChecklist.awal)
-      else if (b.status == StatusBooking.selesai) ...[
-        beres(b, TahapChecklist.awal),
-        beres(b, TahapChecklist.akhir),
-      ],
+      // Barter: barang tawaran punya checklist sendiri.
+      for (final itemId in [null, ?b.itemTawaranId])
+        if (b.status == StatusBooking.berlangsung)
+          beres(b, TahapChecklist.awal, itemId: itemId)
+        else if (b.status == StatusBooking.selesai) ...[
+          beres(b, TahapChecklist.awal, itemId: itemId),
+          beres(b, TahapChecklist.akhir, itemId: itemId),
+        ],
   ];
 }
 
@@ -477,4 +542,148 @@ List<Review> sampleReviewsFor(List<Booking> bookings) {
     }
   }
   return reviews;
+}
+
+/// Notifikasi contoh untuk Gregorian, tersebar di hari ini, kemarin, minggu
+/// ini, dan lebih lama (pengingat sewa dihitung terpisah dari data sewa).
+List<NotificationItem> sampleNotificationsFor(DateTime today) {
+  final t = dateOnly(today);
+  DateTime at(int hari, int jam, int menit) =>
+      addDays(t, hari).add(Duration(hours: jam, minutes: menit));
+  NotificationItem n(String id, TipeNotifikasi tipe, String judul, String isi,
+          DateTime tanggal,
+          {bool dibaca = false, String? tautan}) =>
+      NotificationItem(
+        id: 'ntf-contoh-$id',
+        userId: gregorian,
+        tipe: tipe,
+        judul: judul,
+        isi: isi,
+        tanggal: tanggal,
+        sudahDibaca: dibaca,
+        tautan: tautan,
+      );
+
+  return [
+    n('1', TipeNotifikasi.pengajuanBaru, 'Pengajuan baru untuk Carrier Eiger',
+        'Aulia Putri ingin menyewa 3 hari. Cek dan jawab, ya.', at(0, 9, 12),
+        tautan: '/pengajuan'),
+    n('2', TipeNotifikasi.pengajuanBaru, 'Pengajuan baru untuk Carrier Eiger',
+        'Sarah Manurung ingin menyewa di tanggal yang bertumpuk.',
+        at(-1, 19, 40),
+        tautan: '/pengajuan'),
+    n('3', TipeNotifikasi.pengajuanDisetujui, 'Pengajuanmu disetujui',
+        'GoPro Hero 11 dari Dimas. Isi checklist saat ambil barang.',
+        at(-1, 14, 5),
+        dibaca: true, tautan: '/sewaan'),
+    n('4', TipeNotifikasi.pengajuanBaru, 'Pengajuan baru untuk Raket Yonex',
+        'Dimas Ramadhan ingin menyewa 1 hari.', at(-2, 16, 30),
+        tautan: '/pengajuan'),
+    n('5', TipeNotifikasi.pengajuanDitolak, 'Pengajuanmu ditolak',
+        'Ukulele Soprano Mahoni: barang sedang dipakai.', at(-3, 10, 15),
+        dibaca: true, tautan: '/sewaan?tab=riwayat'),
+    n('6', TipeNotifikasi.ulasanBaru, 'Ulasan baru untukmu',
+        'Rizky Nugraha memberi ★5 untuk Carrier Eiger.', at(-4, 20, 2),
+        dibaca: true, tautan: '/profil/ulasan'),
+    n('7', TipeNotifikasi.verifikasiDisetujui, 'Akunmu sudah terverifikasi',
+        'Sekarang kamu bisa sewa dan menyewakan barang di HobbySwap.',
+        at(-21, 11, 0),
+        dibaca: true, tautan: '/beranda'),
+  ];
+}
+/// Percakapan contoh Gregorian (relatif terhadap [now]); id sewa sesuai
+/// urutan [sampleBookingsFor].
+(List<ChatThread>, List<ChatMessage>) sampleChatsFor(DateTime now) {
+  const rizky = 'usr-003', aulia = 'usr-002', dimas = 'usr-005';
+  const sarah = 'usr-004';
+  final t = dateOnly(now);
+  DateTime at(int hari, int jam, int menit) =>
+      addDays(t, hari).add(Duration(hours: jam, minutes: menit));
+  DateTime lalu(int menit) => now.subtract(Duration(minutes: menit));
+
+  final messages = <ChatMessage>[];
+  var n = 0;
+  void m(String thr, String? dari, String isi, DateTime waktu,
+      {TipePesan tipe = TipePesan.teks,
+      Map<String, dynamic> payload = const {},
+      bool dibaca = true}) {
+    messages.add(ChatMessage(
+      id: 'msg-contoh-${(++n).toString().padLeft(3, '0')}',
+      threadId: thr,
+      senderId: dari,
+      tipe: dari == null ? TipePesan.sistem : tipe,
+      isi: isi,
+      payload: payload,
+      sentAt: waktu,
+      readAt: dibaca ? waktu.add(const Duration(minutes: 3)) : null,
+    ));
+  }
+
+  void sistem(String thr, KejadianSewa k, String bookingId, DateTime waktu) =>
+      m(thr, null, k.teks, waktu,
+          payload: {'kejadian': k.name, 'bookingId': bookingId});
+
+  // Rizky · Sony A6400 · berlangsung.
+  sistem('thr-001', KejadianSewa.dikirim, 'bkg-021', at(-4, 19, 0));
+  m('thr-001', gregorian, 'Halo Kak Rizky, Sony-nya bisa dipakai buat '
+      'liputan acara himpunan?', at(-4, 19, 2));
+  m('thr-001', rizky, 'Bisa banget. Nanti aku setujui ya.', at(-4, 19, 15));
+  sistem('thr-001', KejadianSewa.disetujui, 'bkg-021', at(-3, 8, 30));
+  m('thr-001', rizky, 'Usulan titik COD', at(-3, 8, 32),
+      tipe: TipePesan.lokasiCod,
+      payload: UsulanCod(
+        lokasi: 'FT USU',
+        waktu: at(-1, 10, 0),
+        status: StatusCod.disetujui,
+      ).toPayload());
+  m('thr-001', gregorian, 'Siap, sampai ketemu di FT!', at(-3, 9, 1));
+  sistem('thr-001', KejadianSewa.serahTerima, 'bkg-021', at(-1, 10, 20));
+  m('thr-001', rizky, 'Baterainya udah aku cas penuh ya. Charger ada di tas.',
+      at(-1, 10, 24));
+
+  // Aulia · Carrier Eiger (barang Gregorian) · menunggu, 2 belum dibaca.
+  sistem('thr-002', KejadianSewa.dikirim, 'bkg-005', lalu(30));
+  m('thr-002', aulia, 'Halo Kak, aku Aulia yang ngajuin Carrier Eiger.',
+      lalu(25), dibaca: false);
+  m('thr-002', aulia, 'Boleh ambil sehari sebelum tanggal mulai? Mau '
+      'packing dulu.', lalu(24), dibaca: false);
+
+  // Dimas · GoPro · disetujui, membahas jam ambil.
+  sistem('thr-003', KejadianSewa.disetujui, 'bkg-022', at(-1, 14, 5));
+  m('thr-003', dimas, 'Udah aku setujui ya. Ambilnya di FEB.', at(-1, 14, 6));
+  m('thr-003', gregorian, 'Makasih Kak! Besok bisa ambil jam berapa?',
+      at(-1, 14, 30));
+  m('thr-003', dimas, 'Bisa, jam 4 sore gimana?', at(-1, 15, 2));
+
+  // Sarah · Tenda Dome · selesai.
+  sistem('thr-004', KejadianSewa.pengembalian, 'bkg-024', at(-8, 17, 0));
+  m('thr-004', gregorian, 'Tendanya udah aku balikin ya Kak, makasih banyak!',
+      at(-8, 17, 10));
+  m('thr-004', sarah, 'Makasih ya, tendanya aman!', at(-8, 18, 2));
+
+  DateTime terakhir(String thr) => messages
+      .where((x) => x.threadId == thr)
+      .map((x) => x.sentAt)
+      .reduce((a, b) => a.isAfter(b) ? a : b);
+
+  ChatThread thread(String id, String lawan, String itemId, String bookingId,
+          {int unread = 0}) =>
+      ChatThread(
+        id: id,
+        participantIds: [gregorian, lawan],
+        itemId: itemId,
+        bookingId: bookingId,
+        lastMessageAt: terakhir(id),
+        unreadCount: {gregorian: unread, lawan: 0},
+      );
+
+  return (
+    [
+      thread('thr-001', rizky, 'itm-001', 'bkg-021'),
+      thread('thr-002', aulia, 'itm-013', 'bkg-005', unread: 2),
+      thread('thr-003', dimas, 'itm-003', 'bkg-022'),
+      thread('thr-004', sarah, 'itm-004', 'bkg-024'),
+    ],
+    messages,
+  );
 }

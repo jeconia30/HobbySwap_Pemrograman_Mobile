@@ -21,7 +21,8 @@ String? authRedirect({required String location, required StatusVerifikasi? statu
   }
   // Konfirmasi sewa hanya untuk akun terverifikasi (UI memakai requireVerified;
   // ini pengaman untuk deep link).
-  final ajukan = AppRoutes.ajukanPattern.firstMatch(location);
+  final ajukan = AppRoutes.ajukanPattern.firstMatch(location) ??
+      AppRoutes.barterPattern.firstMatch(location);
   if (ajukan != null && status != StatusVerifikasi.terverifikasi) {
     return AppRoutes.barangDetail(ajukan.group(1)!);
   }

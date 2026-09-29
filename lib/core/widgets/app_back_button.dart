@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'app_icon_tile_button.dart';
+import '../constants/app_strings.dart';
 
 /// Tombol kembali kotak 44×44 (area sentuh tetap 48).
 class AppBackButton extends StatelessWidget {
   const AppBackButton({
     super.key,
     required this.onPressed,
-    this.tooltip = 'Kembali',
+    this.tooltip = AppTeks.kembali,
   });
 
   final VoidCallback? onPressed;

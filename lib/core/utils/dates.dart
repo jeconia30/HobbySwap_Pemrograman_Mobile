@@ -52,3 +52,20 @@ List<String> namaHariPendek() {
   // 2024-01-01 adalah hari Senin.
   return [for (var i = 0; i < 7; i++) f.format(DateTime(2024, 1, 1 + i))];
 }
+
+/// Waktu singkat relatif [today]: "09.12" (hari ini), "Kemarin", atau
+/// "Sab, 11 Okt" (Aktivitas & kotak masuk Pesan).
+String formatWaktuRelatif(DateTime waktu, DateTime today) {
+  final selisih = daysBetween(waktu, today);
+  if (selisih <= 0) return formatJam(waktu);
+  if (selisih == 1) return 'Kemarin';
+  return formatTanggalPendek(waktu);
+}
+
+/// Label pemisah tanggal: "Hari ini", "Kemarin", atau "Sen, 21 Sep".
+String labelHari(DateTime tanggal, DateTime today) {
+  final selisih = daysBetween(tanggal, today);
+  if (selisih <= 0) return 'Hari ini';
+  if (selisih == 1) return 'Kemarin';
+  return formatTanggalPendek(tanggal);
+}

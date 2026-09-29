@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -10,12 +9,14 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_checkbox_field.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_banner.dart';
+import '../../../core/widgets/app_info_note.dart';
 import '../../../core/widgets/app_sticky_bottom.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/item_card.dart';
@@ -25,6 +26,7 @@ import '../../item/domain/item.dart';
 import '../data/booking_providers.dart';
 import '../domain/booking_repository.dart';
 import '../domain/booking_rules.dart';
+import '../../../core/constants/app_strings.dart';
 
 const _maxPesan = 200;
 
@@ -78,7 +80,7 @@ class _KonfirmasiSewaPageState extends ConsumerState<KonfirmasiSewaPage> {
         ..invalidate(blockedDatesProvider(widget.itemId))
         ..invalidate(myBookingsProvider);
       if (!mounted) return;
-      HapticFeedback.lightImpact();
+      hapticAksiPenting();
       context.go(AppRoutes.pengajuanTerkirim(booking.id));
     } on BookingException catch (e) {
       if (e is BookingConflictException) {
@@ -93,7 +95,7 @@ class _KonfirmasiSewaPageState extends ConsumerState<KonfirmasiSewaPage> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _errorMessage = 'Koneksi lagi putus. Coba lagi ya.';
+        _errorMessage = AppTeks.koneksiPutus;
       });
     }
   }
@@ -122,13 +124,13 @@ class _KonfirmasiSewaPageState extends ConsumerState<KonfirmasiSewaPage> {
         AsyncData() => _message(
             icon: Icons.inventory_2_outlined,
             title: 'Barang ini sudah tidak tersedia',
-            actionLabel: 'Ke Beranda',
+            actionLabel: AppTeks.keBeranda,
             onAction: () => context.go(AppRoutes.beranda),
           ),
         AsyncError() => _message(
             icon: Icons.wifi_off_rounded,
-            title: 'Koneksi lagi putus. Coba lagi ya.',
-            actionLabel: 'Coba lagi',
+            title: AppTeks.koneksiPutus,
+            actionLabel: AppTeks.cobaLagi,
             onAction: () => ref.invalidate(itemByIdProvider(widget.itemId)),
           ),
         _ => Skeletonizer(child: _form(ItemCard.placeholder, mulai, kembali)),
@@ -246,7 +248,7 @@ class _KonfirmasiSewaPageState extends ConsumerState<KonfirmasiSewaPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  label('Kembali'),
+                                  label(AppTeks.kembali),
                                   Text(formatTanggalPendek(kembali),
                                       style: text.titleMedium),
                                 ],
@@ -336,8 +338,21 @@ class _KonfirmasiSewaPageState extends ConsumerState<KonfirmasiSewaPage> {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'Pembayaran langsung ke pemilik saat serah terima.',
+                          item.dendaPerHari > 0
+                              ? 'Telat mengembalikan kena denda '
+                                  '${formatRupiah(item.dendaPerHari)} per '
+                                  'hari, dibayar ke pemilik saat pengembalian.'
+                              : 'Barang ini tanpa denda keterlambatan, tapi '
+                                  'tetap kembalikan tepat waktu, ya.',
+                          key: const Key('konfirmasi-denda'),
                           style: muted,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        const AppInfoNote(
+                          key: Key('konfirmasi-cod'),
+                          icon: Icons.payments_outlined,
+                          message: 'Bayar saat COD: tunai atau transfer '
+                              'langsung ke pemilik.',
                         ),
                       ],
                     ),

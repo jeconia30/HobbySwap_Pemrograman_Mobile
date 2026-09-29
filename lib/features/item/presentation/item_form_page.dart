@@ -3,13 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_chip.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_banner.dart';
@@ -22,6 +25,9 @@ import '../domain/item.dart';
 import '../domain/item_repository.dart';
 import '../domain/kategori.dart';
 import 'kategori_visual.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../booking/domain/booking_rules.dart';
+import '../../../core/utils/formatters.dart';
 
 /// Penanda foto simulasi (UI-first; belum kamera/galeri asli).
 const _fotoSimulasi = 'simulasi://foto-barang';
@@ -44,6 +50,15 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   final _harga = TextEditingController();
   final _lokasi = TextEditingController();
   final _deskripsi = TextEditingController();
+
+  /// "Lanjut" di Nama barang langsung ke Harga (chip kategori dipilih dengan ketuk).
+  final _hargaFocus = FocusNode();
+  final _deskripsiFocus = FocusNode();
+  final _lokasiFocus = FocusNode();
+  final _denda = TextEditingController();
+  bool _tanpaDenda = false;
+  bool _bisaBarter = false;
+  final _minatBarter = <Kategori>{};
   final _kategoriField = GlobalKey<FormFieldState<Kategori>>();
 
   Kategori? _kategori;
@@ -71,6 +86,12 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
     _prefilled = true;
     _judul.text = item.judul;
     _harga.text = '${item.hargaPerHari}';
+    _tanpaDenda = item.dendaPerHari == 0;
+    _bisaBarter = item.bisaBarter;
+    _minatBarter
+      ..clear()
+      ..addAll(item.minatBarter);
+    _denda.text = _tanpaDenda ? '' : '${item.dendaPerHari}';
     _lokasi.text = item.lokasiKampus;
     _deskripsi.text = item.deskripsi;
     _kategori = item.kategori;
@@ -79,6 +100,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
 
   @override
   void dispose() {
+    _hargaFocus.dispose();
+    _deskripsiFocus.dispose();
+    _lokasiFocus.dispose();
+    _denda.dispose();
     _judul.dispose();
     _harga.dispose();
     _lokasi.dispose();
@@ -118,8 +143,11 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       ),
     );
     if (choice == null || !mounted) return;
-    setState(() => _foto =
-        choice == _FotoChoice.remove ? const [] : const [_fotoSimulasi]);
+    setState(
+      () => _foto = choice == _FotoChoice.remove
+          ? const []
+          : const [_fotoSimulasi],
+    );
   }
 
   Future<void> _submit() async {
@@ -138,6 +166,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       hargaPerHari: int.parse(_harga.text.trim()),
       lokasiKampus: _lokasi.text,
       daftarFoto: _foto,
+      dendaPerHari: _tanpaDenda ? 0 : int.parse(_denda.text.trim()),
+      bisaBarter: _bisaBarter,
+      minatBarter: _bisaBarter ? _minatBarter.toList() : const [],
     );
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _submitting = true);
@@ -150,14 +181,18 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
         ..invalidate(myItemsProvider)
         ..invalidate(itemByIdProvider(item.id));
       if (!mounted) return;
-      HapticFeedback.lightImpact();
+      if (!_isEdit) hapticAksiPenting();
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text(_isEdit
-              ? 'Perubahan disimpan.'
-              : 'Barangmu sudah tayang di HobbySwap!'),
-        ));
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              _isEdit
+                  ? 'Perubahan disimpan.'
+                  : 'Barangmu sudah tayang di HobbySwap!',
+            ),
+          ),
+        );
       _back();
     } on ItemException catch (e) {
       if (!mounted) return;
@@ -169,7 +204,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _error = 'Koneksi lagi putus. Coba lagi ya.';
+        _error = AppTeks.koneksiPutus;
       });
     }
   }
@@ -178,37 +213,48 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   Widget build(BuildContext context) {
     final title = _isEdit ? 'Ubah barang' : 'Sewakan barang';
 
-    Widget message(IconData icon, String text,
-            [String? action, VoidCallback? onAction]) =>
-        _Scaffold(
-          title: title,
-          onBack: _back,
-          body: Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.xxxl),
-            child: AppEmptyState(
-              icon: icon,
-              title: text,
-              actionLabel: action,
-              onAction: onAction,
-            ),
-          ),
-        );
+    Widget message(
+      IconData icon,
+      String text, [
+      String? action,
+      VoidCallback? onAction,
+    ]) => _Scaffold(
+      title: title,
+      onBack: _back,
+      body: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.xxxl),
+        child: AppEmptyState(
+          icon: icon,
+          title: text,
+          actionLabel: action,
+          onAction: onAction,
+        ),
+      ),
+    );
 
     if (_isEdit) {
       final async = ref.watch(itemByIdProvider(widget.itemId!));
       final userId = ref.watch(authControllerProvider)?.id;
       switch (async) {
         case AsyncError():
-          return message(Icons.wifi_off_rounded,
-              'Koneksi lagi putus. Coba lagi ya.', 'Coba lagi', () {
-            ref.invalidate(itemByIdProvider(widget.itemId!));
-          });
+          return message(
+            Icons.wifi_off_rounded,
+            AppTeks.koneksiPutus,
+            AppTeks.cobaLagi,
+            () {
+              ref.invalidate(itemByIdProvider(widget.itemId!));
+            },
+          );
         case AsyncData(value: null):
           return message(
-              Icons.inventory_2_outlined, 'Barang ini sudah tidak ada.');
+            Icons.inventory_2_outlined,
+            'Barang ini sudah tidak ada.',
+          );
         case AsyncData(:final value?) when value.item.ownerId != userId:
-          return message(Icons.lock_outline_rounded,
-              'Kamu hanya bisa mengubah barangmu sendiri.');
+          return message(
+            Icons.lock_outline_rounded,
+            'Kamu hanya bisa mengubah barangmu sendiri.',
+          );
         case AsyncData(:final value?):
           _prefill(value.item);
         default:
@@ -267,6 +313,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
               maxLength: ItemValidators.judulMaks,
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => _hargaFocus.requestFocus(),
             ),
             const SizedBox(height: AppSpacing.md),
             _KategoriField(
@@ -279,6 +326,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
             AppTextField(
               key: const Key('form-barang-harga'),
               label: 'Harga sewa per hari',
+              focusNode: _hargaFocus,
               hint: '25000',
               prefixText: 'Rp ',
               controller: _harga,
@@ -292,21 +340,40 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: AppSpacing.lg),
+            _DendaField(
+              controller: _denda,
+              harga: _harga,
+              tanpaDenda: _tanpaDenda,
+              enabled: !_submitting,
+              onTanpaDenda: (v) => setState(() {
+                _tanpaDenda = v;
+                if (v) _denda.clear();
+              }),
+              onSubmitted: () => _lokasiFocus.requestFocus(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
             AppTextField(
               key: const Key('form-barang-lokasi'),
               label: 'Lokasi ambil',
+              focusNode: _lokasiFocus,
               hint: 'Contoh: FT USU, Pintu 4',
               controller: _lokasi,
               enabled: !_submitting,
               validator: ItemValidators.lokasi,
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,
+              // Lewati chip titik kampus; langsung ke Deskripsi.
+              onFieldSubmitted: (_) => _deskripsiFocus.requestFocus(),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            _TitikKampusChips(controller: _lokasi, enabled: !_submitting),
             const SizedBox(height: AppSpacing.lg),
             AppTextField(
               key: const Key('form-barang-deskripsi'),
               label: 'Deskripsi',
-              hint: 'Kondisi, kelengkapan, dan hal yang perlu diperhatikan '
+              focusNode: _deskripsiFocus,
+              hint:
+                  'Kondisi, kelengkapan, dan hal yang perlu diperhatikan '
                   'penyewa.',
               controller: _deskripsi,
               enabled: !_submitting,
@@ -316,6 +383,18 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
               maxLines: 8,
               keyboardType: TextInputType.multiline,
               textCapitalization: TextCapitalization.sentences,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _BarterField(
+              aktif: _bisaBarter,
+              minat: _minatBarter,
+              enabled: !_submitting,
+              onAktif: (v) => setState(() => _bisaBarter = v),
+              onMinat: (k) => setState(
+                () => _minatBarter.contains(k)
+                    ? _minatBarter.remove(k)
+                    : _minatBarter.add(k),
+              ),
             ),
           ],
         ),
@@ -347,8 +426,12 @@ class _Scaffold extends StatelessWidget {
               child: SingleChildScrollView(
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(AppSpacing.pageHome,
-                    AppSpacing.md, AppSpacing.pageHome, AppSpacing.xl),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.pageHome,
+                  AppSpacing.md,
+                  AppSpacing.pageHome,
+                  AppSpacing.xl,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -359,9 +442,10 @@ class _Scaffold extends StatelessWidget {
                         Expanded(
                           child: Semantics(
                             header: true,
-                            child: Text(title,
-                                style:
-                                    Theme.of(context).textTheme.headlineMedium),
+                            child: Text(
+                              title,
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
                           ),
                         ),
                       ],
@@ -403,9 +487,12 @@ class _KategoriField extends StatelessWidget {
       builder: (field) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Kategori',
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(color: theme.colorScheme.onSurface)),
+          Text(
+            'Kategori',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: AppSpacing.sm,
@@ -429,8 +516,9 @@ class _KategoriField extends StatelessWidget {
               padding: const EdgeInsets.only(top: AppSpacing.sm),
               child: Text(
                 field.errorText!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.error),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ),
         ],
@@ -449,8 +537,191 @@ class _FotoPreview extends StatelessWidget {
     return ColoredBox(
       color: kategori.tileColor,
       child: Center(
-        child: Icon(kategori.icon,
-            color: AppPalette.cream, size: AppSizes.iconTile * 0.6),
+        child: Icon(
+          kategori.icon,
+          color: AppPalette.cream,
+          size: AppSizes.iconTile * 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pilihan cepat titik ambil (sama dengan usulan COD di Pesan).
+class _TitikKampusChips extends StatelessWidget {
+  const _TitikKampusChips({required this.controller, required this.enabled});
+
+  final TextEditingController controller;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) => SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final (i, t) in titikKampus.indexed) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.sm),
+              AppChip(
+                key: Key('titik-$t'),
+                label: t,
+                selected: value.text.trim() == t,
+                onTap: () {
+                  if (enabled) controller.text = t;
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Denda telat per hari": saran 50% harga sewa atau "Tanpa denda".
+class _DendaField extends StatelessWidget {
+  const _DendaField({
+    required this.controller,
+    required this.harga,
+    required this.tanpaDenda,
+    required this.enabled,
+    required this.onTanpaDenda,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final TextEditingController harga;
+  final bool tanpaDenda;
+  final bool enabled;
+  final ValueChanged<bool> onTanpaDenda;
+  final VoidCallback onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([harga, controller]),
+      builder: (context, _) {
+        final saran = saranDenda(int.tryParse(harga.text.trim()) ?? 0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppTextField(
+              key: const Key('form-barang-denda'),
+              label: 'Denda telat per hari',
+              hint: saran > 0 ? '$saran' : '12500',
+              prefixText: 'Rp ',
+              controller: controller,
+              enabled: enabled && !tanpaDenda,
+              validator: (v) => ItemValidators.denda(v, tanpaDenda: tanpaDenda),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(7),
+              ],
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => onSubmitted(),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: [
+                if (saran > 0)
+                  AppChip(
+                    key: const Key('denda-saran'),
+                    label: 'Saran ${formatRupiah(saran)} (50%)',
+                    selected: !tanpaDenda && controller.text.trim() == '$saran',
+                    onTap: () {
+                      if (!enabled) return;
+                      onTanpaDenda(false);
+                      controller.text = '$saran';
+                    },
+                  ),
+                AppChip(
+                  key: const Key('denda-tanpa'),
+                  label: 'Tanpa denda',
+                  selected: tanpaDenda,
+                  onTap: () {
+                    if (enabled) onTanpaDenda(!tanpaDenda);
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Bagian "Barter": terima tawaran barter + kategori yang dicari.
+class _BarterField extends StatelessWidget {
+  const _BarterField({
+    required this.aktif,
+    required this.minat,
+    required this.enabled,
+    required this.onAktif,
+    required this.onMinat,
+  });
+
+  final bool aktif;
+  final Set<Kategori> minat;
+  final bool enabled;
+  final ValueChanged<bool> onAktif;
+  final ValueChanged<Kategori> onMinat;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+    return AppCard(
+      key: const Key('form-barang-barter'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Barter', style: text.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Barter = saling pinjam untuk tanggal yang sama, lalu sama-sama '
+            'dikembalikan.',
+            style: text.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          // Material sendiri: latar kartu tidak menutupi efek ink ListTile.
+          Material(
+            type: MaterialType.transparency,
+            child: MergeSemantics(
+              child: SwitchListTile(
+                key: const Key('form-bisa-barter'),
+                contentPadding: EdgeInsets.zero,
+                title: Text('Terima tawaran barter', style: text.bodyMedium),
+                value: aktif,
+                onChanged: enabled ? onAktif : null,
+              ),
+            ),
+          ),
+          if (aktif) ...[
+            Text('Barang yang kamu cari', style: text.labelMedium),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: [
+                for (final k in Kategori.values)
+                  AppChip(
+                    key: Key('minat-${k.name}'),
+                    label: k.label,
+                    selected: minat.contains(k),
+                    showCheck: true,
+                    onTap: () {
+                      if (enabled) onMinat(k);
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

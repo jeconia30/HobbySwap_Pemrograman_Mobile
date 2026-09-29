@@ -16,6 +16,7 @@ class AppTextField extends StatelessWidget {
     this.keyboardType,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.focusNode,
     this.autofillHints,
     this.inputFormatters,
     this.textCapitalization = TextCapitalization.none,
@@ -38,6 +39,7 @@ class AppTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onFieldSubmitted;
+  final FocusNode? focusNode;
   final Iterable<String>? autofillHints;
   final List<TextInputFormatter>? inputFormatters;
   final TextCapitalization textCapitalization;
@@ -70,6 +72,7 @@ class AppTextField extends StatelessWidget {
           child: TextFormField(
             controller: controller,
             validator: validator,
+            focusNode: focusNode,
             obscureText: obscureText,
             enabled: enabled,
             keyboardType: keyboardType,

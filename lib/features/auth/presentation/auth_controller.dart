@@ -36,6 +36,27 @@ class AuthController extends Notifier<User?> {
         );
   }
 
+  Future<void> updateProfile({
+    required String nama,
+    String? bio,
+    required WarnaAvatar warnaAvatar,
+  }) async {
+    state = await ref
+        .read(authRepositoryProvider)
+        .updateProfile(nama: nama, bio: bio, warnaAvatar: warnaAvatar);
+  }
+
+  Future<User> loginDenganGoogle(String email) async {
+    final user = await ref.read(authRepositoryProvider).loginDenganGoogle(email);
+    state = user;
+    return user;
+  }
+
+  Future<void> hapusAkun() async {
+    await ref.read(authRepositoryProvider).hapusAkun();
+    state = null;
+  }
+
   /// Menyalin ulang user terbaru dari repository (mis. setelah status berubah).
   void refresh() => state = ref.read(authRepositoryProvider).currentUser;
 

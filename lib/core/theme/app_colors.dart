@@ -7,14 +7,14 @@ abstract final class AppPalette {
   static const lightSurfaceAlt = Color(0xFFE9E4D6);
   static const lightBorder = Color(0xFFDED8C7);
   static const lightTextPrimary = Color(0xFF1A2C24);
-  static const lightTextSecondary = Color(0xFF5F6D62);
+  static const lightTextSecondary = Color(0xFF546056);
   static const lightAccent = Color(0xFF1E4638);
   static const lightOnAccent = Color(0xFFF4F1E8);
   static const lightAccentText = Color(0xFF1E4638);
   static const lightAccentSoft = Color(0xFFDDE7D5);
-  static const lightVerified = Color(0xFF4E8C43);
-  static const lightWarning = Color(0xFFB4832A);
-  static const lightError = Color(0xFFC24A32);
+  static const lightVerified = Color(0xFF396631);
+  static const lightWarning = Color(0xFF77561C);
+  static const lightError = Color(0xFF9D3C29);
 
   static const darkBg = Color(0xFF12211B);
   static const darkSurface = Color(0xFF1B2E26);
@@ -28,7 +28,7 @@ abstract final class AppPalette {
   static const darkAccentSoft = Color(0xFF22392E);
   static const darkVerified = Color(0xFF7FBF6E);
   static const darkWarning = Color(0xFFE5B860);
-  static const darkError = Color(0xFFE8836F);
+  static const darkError = Color(0xFFEB917F);
 
   /// Hijau daun pada huruf "S" logo; sama di kedua mode.
   static const brandLeaf = Color(0xFF8FBE86);
@@ -40,17 +40,23 @@ abstract final class AppPalette {
   static const splashBg = darkBg;
   static const splashDecorDeep = lightAccent;
   static const splashDecorMid = brandMid;
-  static const splashTitle = lightOnAccent;
   static const splashSubtitle = darkTextSecondary;
   static const splashDotInactive = Color(0xFF3C5A4B);
 
-  /// Warna tile foto per kategori (sama di kedua mode).
+  /// Bayangan halus tile logo di mode terang (teks utama 14%).
+  static const logoShadow = Color(0x241A2C24);
+
+  /// Warna tile foto per kategori (sama di kedua mode). Teks/ikon krem di atasnya
+  /// kontras ≥ 4.5:1.
   static const kategoriKamera = Color(0xFF2E5A47);
-  static const kategoriCamping = brandMid;
-  static const kategoriOlahraga = Color(0xFF7D7148);
-  static const kategoriMusik = Color(0xFF8A6A3E);
+  static const kategoriCamping = Color(0xFF4E7348);
+  static const kategoriOlahraga = Color(0xFF766A44);
+  static const kategoriMusik = Color(0xFF84663C);
   static const kategoriGame = Color(0xFF3F6A7A);
-  static const kategoriLainnya = Color(0xFF7E8A80);
+  static const kategoriLainnya = Color(0xFF646D65);
+
+  /// Tanpa warna (latar tombol outline, pembatas tersembunyi).
+  static const transparent = Color(0x00000000);
 
   /// Krem untuk ikon/teks di atas tile gelap.
   static const cream = lightBg;
@@ -65,6 +71,14 @@ abstract final class AppPalette {
   /// Kartu statistik Barang Saya (warna brand tetap di kedua mode).
   static const statsLabel = Color(0xFFA9C2B1);
   static const statsStar = darkWarning;
+
+  /// 6 warna preset avatar inisial (teks krem di atasnya).
+  static const avatarHijau = lightAccent;
+  static const avatarPinus = Color(0xFF2E5A47);
+  static const avatarBiru = Color(0xFF3F6A7A);
+  static const avatarUngu = Color(0xFF6A4F7E);
+  static const avatarCoklat = Color(0xFF84663C);
+  static const avatarBata = Color(0xFFA14E35);
 }
 
 @immutable

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../features/auth/domain/user.dart';
 import '../theme/app_colors.dart';
+import '../theme/avatar_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/formatters.dart';
 
-/// Avatar inisial bulat; badge centang `verified` bila akun terverifikasi.
+/// Avatar inisial krem di atas warna pilihan user; badge centang `verified`\n/// bila akun terverifikasi.
 class AppAvatar extends StatelessWidget {
   const AppAvatar({
     super.key,
@@ -27,7 +28,7 @@ class AppAvatar extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = AppColors.of(context);
     final verified = user.statusVerifikasi == StatusVerifikasi.terverifikasi;
-    final badge = size * 0.4;
+    final badge = size * 0.34;
 
     final avatar = SizedBox.square(
       dimension: size,
@@ -39,16 +40,16 @@ class AppAvatar extends StatelessWidget {
             height: size,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: colors.accentSoft,
+              color: user.warnaAvatar.color,
               shape: BoxShape.circle,
             ),
             child: Text(
               initials(user.nama),
               textScaler: TextScaler.noScaling,
               style: theme.textTheme.titleMedium?.copyWith(
-                color: colors.accentText,
+                color: AppPalette.cream,
                 fontWeight: FontWeight.w800,
-                fontSize: size * 0.36,
+                fontSize: size * 0.34,
               ),
             ),
           ),

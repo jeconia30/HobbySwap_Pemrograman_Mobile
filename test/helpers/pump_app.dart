@@ -5,10 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hobby_swab/app.dart';
 import 'package:hobby_swab/core/router/app_router.dart';
 import 'package:hobby_swab/core/storage/session_storage.dart';
+import 'package:hobby_swab/core/storage/settings_storage.dart';
 import 'package:hobby_swab/core/theme/app_spacing.dart';
 import 'package:hobby_swab/core/utils/clock.dart';
 import 'package:hobby_swab/core/utils/dates.dart';
+import 'package:hobby_swab/features/chat/data/chat_providers.dart';
 import 'package:hobby_swab/features/handover/data/checklist_providers.dart';
+import 'package:hobby_swab/features/profile/presentation/profil_page.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,13 +43,17 @@ Future<SessionStorage> pumpApp(
     if (onboardingSeen) SessionStorage.onboardingSeenKey: true,
     SessionStorage.sessionUserIdKey: ?sessionUserId,
   });
+  final settings = await SettingsStorage.create();
 
   await tester.pumpWidget(ProviderScope(
     overrides: [
       sessionStorageProvider.overrideWithValue(storage),
+      settingsStorageProvider.overrideWithValue(settings),
       clockProvider.overrideWithValue(() => testToday),
       // Pihak lawan tidak menyetujui checklist otomatis di test.
       checklistAutoApproveDelayProvider.overrideWithValue(null),
+      // Lawan bicara tidak membalas otomatis di test.
+      chatAutoBalasProvider.overrideWithValue(null),
     ],
     child: const HobbySwapApp(),
   ));
@@ -87,9 +94,22 @@ Future<void> openTab(WidgetTester tester, String label) async {
 /// Keluar lewat tab Profil.
 Future<void> logoutViaProfil(WidgetTester tester) async {
   await openTab(tester, 'Profil');
-  final keluar = find.text('Keluar');
-  await tester.ensureVisible(keluar);
-  await tester.pumpAndSettle();
+  final keluar = find.byKey(const Key('profil-keluar'));
+  await scrollProfilTo(tester, keluar);
   await tester.tap(keluar);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('keluar-konfirmasi')));
+  await tester.pumpAndSettle();
+}
+
+/// Profil memakai ListView malas; gulir sampai [finder] dibangun & terlihat.
+/// [delta] negatif untuk menggulir ke atas.
+Future<void> scrollProfilTo(WidgetTester tester, Finder finder,
+    {double delta = 200}) async {
+  await tester.scrollUntilVisible(finder, delta,
+      scrollable: find
+          .descendant(
+              of: find.byType(ProfilPage), matching: find.byType(Scrollable))
+          .first);
   await tester.pumpAndSettle();
 }

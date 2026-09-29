@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,15 +7,21 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_error_banner.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/hs_logo_mark.dart';
+import '../data/auth_providers.dart';
 import '../domain/auth_repository.dart';
 import 'auth_controller.dart';
+import '../../../core/constants/app_strings.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.emailAwal});
+
+  /// Diisi setelah reset password berhasil.
+  final String? emailAwal;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -24,7 +29,7 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _identifier = TextEditingController();
+  late final _identifier = TextEditingController(text: widget.emailAwal);
   final _password = TextEditingController();
 
   bool _obscure = true;
@@ -39,10 +44,42 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  void _comingSoon(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+  /// Pemilih akun Google kampus (simulasi, belum OAuth sungguhan).
+  Future<void> _masukGoogle() async {
+    final akun = await ref.read(authRepositoryProvider).akunGoogle();
+    if (!mounted) return;
+    final email = await showAppBottomSheet<String>(
+      context,
+      builder: (sheet) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AppSheetTitle('Pilih akun Google kampus'),
+          for (final u in akun)
+            AppSheetAction(
+              key: Key('google-${u.id}'),
+              icon: Icons.account_circle_outlined,
+              label: u.email,
+              onTap: () => Navigator.pop(sheet, u.email),
+            ),
+        ],
+      ),
+    );
+    if (email == null || !mounted) return;
+    setState(() {
+      _submitting = true;
+      _errorMessage = null;
+    });
+    try {
+      final user = await ref
+          .read(authControllerProvider.notifier)
+          .loginDenganGoogle(email);
+      if (mounted) context.go(postAuthDestination(user.statusVerifikasi));
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _errorMessage = e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -60,7 +97,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           .read(authControllerProvider.notifier)
           .login(_identifier.text, _password.text);
       if (!mounted) return;
-      HapticFeedback.lightImpact();
       context.go(postAuthDestination(user.statusVerifikasi));
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -71,7 +107,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Koneksi lagi putus. Coba lagi ya.';
+        _errorMessage = AppTeks.koneksiPutus;
         _submitting = false;
       });
     }
@@ -96,10 +132,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: (constraints.maxHeight -
-                        AppSpacing.pageTop -
-                        AppSpacing.xl)
-                    .clamp(0, double.infinity),
+                minHeight:
+                    (constraints.maxHeight - AppSpacing.pageTop - AppSpacing.xl)
+                        .clamp(0, double.infinity),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -121,14 +156,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           const SizedBox(height: AppSpacing.group),
                           Semantics(
                             header: true,
-                            child: Text('Selamat datang lagi',
-                                style: text.headlineLarge),
+                            child: Text(
+                              'Selamat datang lagi',
+                              style: text.headlineLarge,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             'Masuk pakai email kampus atau NIM kamu.',
-                            style: text.bodyMedium
-                                ?.copyWith(color: scheme.onSurfaceVariant),
+                            style: text.bodyMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.group),
                           AppTextField(
@@ -164,9 +202,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               onPressed: _submitting
                                   ? null
                                   : () => setState(() => _obscure = !_obscure),
-                              icon: Icon(_obscure
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined),
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
                             ),
                           ),
                           Align(
@@ -174,7 +214,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             child: TextButton(
                               onPressed: _submitting
                                   ? null
-                                  : () => _comingSoon('Fitur ini segera hadir'),
+                                  : () => context.push(AppRoutes.lupaPassword),
                               child: const Text('Lupa password?'),
                             ),
                           ),
@@ -196,9 +236,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             label: 'Masuk dengan Google',
                             variant: AppButtonVariant.outline,
                             icon: const _GoogleGlyph(),
-                            onPressed: _submitting
-                                ? null
-                                : () => _comingSoon('Segera hadir'),
+                            onPressed: _submitting ? null : _masukGoogle,
                           ),
                         ],
                       ),
@@ -212,8 +250,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       children: [
                         Text(
                           'Belum punya akun?',
-                          style: text.bodyMedium
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          style: text.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                         TextButton(
                           onPressed: _submitting
@@ -247,8 +286,9 @@ class _OrDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
             'atau',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         const Expanded(child: Divider()),

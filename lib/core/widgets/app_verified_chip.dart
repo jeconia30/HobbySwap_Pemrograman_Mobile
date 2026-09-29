@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../constants/app_strings.dart';
 
 /// Badge "Terverifikasi": ikon centang + teks (bukan warna saja).
 class AppVerifiedChip extends StatelessWidget {
@@ -27,7 +28,7 @@ class AppVerifiedChip extends StatelessWidget {
                 size: AppSizes.iconXs, color: colors.verified),
             const SizedBox(width: AppSpacing.xs),
             Text(
-              'Terverifikasi',
+              AppTeks.terverifikasi,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: colors.verified, fontWeight: FontWeight.w700),
             ),

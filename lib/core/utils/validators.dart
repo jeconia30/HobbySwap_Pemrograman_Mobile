@@ -56,6 +56,25 @@ abstract final class AuthValidators {
     return null;
   }
 
+  /// Konfirmasi password baru harus sama dengan [password].
+  static String? konfirmasi(String? value, String password) {
+    if (value == null || value.isEmpty) return 'Ulangi password barumu';
+    if (value != password) return 'Password belum sama';
+    return null;
+  }
+
+  /// Kekuatan password untuk indikator 3 segmen: Lemah = belum memenuhi
+  /// aturan Daftar; Sedang = memenuhi; Kuat = memenuhi dan (≥ 12 karakter,
+  /// ada simbol, atau campur huruf besar & kecil).
+  static KekuatanPassword kekuatan(String value) {
+    if (newPassword(value) != null) return KekuatanPassword.lemah;
+    final ekstra = value.length >= 12 ||
+        RegExp(r'[^\p{L}\d]', unicode: true).hasMatch(value) ||
+        (RegExp(r'[A-Z]').hasMatch(value) &&
+            RegExp(r'[a-z]').hasMatch(value));
+    return ekstra ? KekuatanPassword.kuat : KekuatanPassword.sedang;
+  }
+
   static String? terms(bool? accepted) {
     if (accepted != true) return 'Centang persetujuan dulu ya';
     return null;
@@ -84,6 +103,15 @@ abstract final class ItemValidators {
     return null;
   }
 
+  /// Denda telat per hari; [tanpaDenda] = boleh kosong (0).
+  static String? denda(String? value, {required bool tanpaDenda}) {
+    if (tanpaDenda) return null;
+    final v = int.tryParse(value?.trim() ?? '');
+    if (v == null || v <= 0) return 'Isi denda atau pilih Tanpa denda';
+    if (v > hargaMaks) return 'Maksimal Rp1.000.000 per hari';
+    return null;
+  }
+
   static String? lokasi(String? value) {
     if ((value?.trim() ?? '').isEmpty) return 'Isi lokasi ambil barang';
     return null;
@@ -96,4 +124,36 @@ abstract final class ItemValidators {
     }
     return null;
   }
+}
+
+abstract final class ProfileValidators {
+  static const namaMin = 3;
+  static const namaMaks = 40;
+
+  static String? nama(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.length < namaMin) return 'Nama minimal $namaMin karakter';
+    if (v.length > namaMaks) return 'Nama maksimal $namaMaks karakter';
+    return null;
+  }
+}
+
+abstract final class LaporanValidators {
+  static const min = 20;
+  static const maks = 500;
+
+  static String? deskripsi(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.length < min) return 'Ceritakan masalahnya minimal $min karakter';
+    return null;
+  }
+}
+enum KekuatanPassword {
+  lemah('Lemah'),
+  sedang('Sedang'),
+  kuat('Kuat');
+
+  const KekuatanPassword(this.label);
+
+  final String label;
 }

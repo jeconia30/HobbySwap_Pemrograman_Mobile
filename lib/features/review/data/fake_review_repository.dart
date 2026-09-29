@@ -3,9 +3,12 @@ import '../../../data/fake/fake_account_store.dart';
 import '../../../data/fake/fake_booking_store.dart';
 import '../../../data/fake/fake_handover_review_store.dart';
 import '../../../data/fake/fake_item_store.dart';
+import '../../../data/fake/fake_notification_store.dart';
+import '../../activity/domain/notification_item.dart';
 import '../../booking/domain/booking.dart';
 import '../domain/review.dart';
 import '../domain/review_repository.dart';
+import '../../../core/constants/app_strings.dart';
 
 class FakeReviewRepository implements ReviewRepository {
   FakeReviewRepository({
@@ -15,6 +18,7 @@ class FakeReviewRepository implements ReviewRepository {
     required this._bookings,
     required this._reviews,
     required this._now,
+    this._notifications,
     this.delay = const Duration(milliseconds: 700),
   });
 
@@ -24,6 +28,7 @@ class FakeReviewRepository implements ReviewRepository {
   final FakeBookingStore _bookings;
   final FakeReviewStore _reviews;
   final DateTime Function() _now;
+  final FakeNotificationStore? _notifications;
   final Duration delay;
 
   @override
@@ -38,7 +43,7 @@ class FakeReviewRepository implements ReviewRepository {
     final booking = _bookings.byId(bookingId);
     final item = booking == null ? null : _items.byId(booking.itemId);
     if (userId == null || booking == null || item == null) {
-      throw const ReviewException('Sewa ini tidak ditemukan.');
+      throw const ReviewException(AppTeks.sewaTidakDitemukan);
     }
     final PeranUlasan peran;
     final String keUserId;
@@ -81,6 +86,14 @@ class FakeReviewRepository implements ReviewRepository {
     final baru = ratingBaru(dinilai.rating, dinilai.jumlahUlasan, bintang);
     _accounts.updateUser(
         dinilai.copyWith(rating: baru.rating, jumlahUlasan: baru.jumlah));
+    _notifications?.kirim(
+      userId: keUserId,
+      tipe: TipeNotifikasi.ulasanBaru,
+      judul: 'Ulasan baru untukmu',
+      isi: '${_accounts.byId(userId)?.user.nama ?? 'Seseorang'} memberi '
+          '★$bintang untuk ${item.judul}.',
+      tautan: '/profil/ulasan',
+    );
     return review;
   }
 

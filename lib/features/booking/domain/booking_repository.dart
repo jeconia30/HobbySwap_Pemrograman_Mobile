@@ -46,6 +46,50 @@ abstract interface class BookingRepository {
   /// Penyewa membatalkan; hanya untuk status menunggu.
   Future<void> cancel(String bookingId);
 
+  /// Penyewa atau pemilik membatalkan sewa yang sudah disetujui ([alasan]
+  /// wajib). Hari H tercatat sebagai pembatalan mendadak; sewa berlangsung
+  /// tidak bisa dibatalkan. Tanggalnya kembali terbuka.
+  Future<void> batalkanSewa(String bookingId, String alasan);
+
+  /// Pemilik mencatat pembayaran COD (checklist awal).
+  Future<Booking> catatPembayaran(
+    String bookingId, {
+    required MetodeBayar metode,
+    required bool diterima,
+  });
+
+  /// Pemilik barang mengonfirmasi denda keterlambatan diterima (checklist
+  /// akhir). Untuk barter, [itemId] = barang tawaran → dicatat pengaju.
+  Future<Booking> catatDenda(
+    String bookingId, {
+    required bool diterima,
+    String? itemId,
+  });
+
+  // Barter (M11): tukar pinjam sementara tanpa uang.
+
+  /// Pengaju menawarkan [itemTawaranId] (miliknya) untuk dipinjam pemilik
+  /// [itemId] pada tanggal yang sama.
+  Future<Booking> createBarter({
+    required String itemId,
+    required String itemTawaranId,
+    required DateTime mulai,
+    required DateTime kembali,
+    String? pesan,
+  });
+
+  /// Pemilik meminta barang lain milik pengaju; pengajuan kembali menunggu
+  /// tanggapan pengaju.
+  Future<Booking> counterBarter(String bookingId, String itemTawaranBaruId);
+
+  /// Pengaju menyetujui barang yang diminta pemilik → barter disepakati.
+  Future<Booking> setujuiCounter(String bookingId);
+
+  /// Gabungan tanggal terblokir kedua barang (tanggal barter harus kosong
+  /// di keduanya).
+  Future<List<RentangTanggal>> blockedDatesBarter(
+      String itemId, String itemTawaranId);
+
   /// Detail satu sewa (untuk checklist & rating); `null` bila tidak ada.
   Future<BookingDetail?> bookingById(String bookingId);
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_press_scale.dart';
 
 /// Bottom sheet standar (radius atas 28, drag handle, safe area).
 Future<T?> showAppBottomSheet<T>(
@@ -69,7 +70,7 @@ class AppSheetAction extends StatelessWidget {
         ? theme.colorScheme.error.withValues(alpha: 0.12)
         : colors.accentSoft;
 
-    return InkWell(
+    final row = InkWell(
       onTap: onTap,
       borderRadius: AppRadius.inputAll,
       child: ConstrainedBox(
@@ -97,5 +98,6 @@ class AppSheetAction extends StatelessWidget {
         ),
       ),
     );
+    return AppPressScale(child: row);
   }
 }

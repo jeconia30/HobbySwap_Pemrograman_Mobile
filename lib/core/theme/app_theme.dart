@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
+import 'app_page_transitions.dart';
 import 'app_spacing.dart';
 
 /// Gaya teks khusus di luar slot TextTheme; di-`merge` ke gaya tema agar font tetap.
 abstract final class AppTextStyles {
-  static const wordmark =
-      TextStyle(fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: -1, height: 1.1);
   static const lead = TextStyle(fontSize: 15.5, height: 1.55);
   static const greeting = TextStyle(
       fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.2);
@@ -42,6 +41,20 @@ abstract final class AppTextStyles {
       fontSize: 25, fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.2);
   static const checklistLabel =
       TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.3);
+  static const profileName = TextStyle(
+      fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.4, height: 1.2);
+  static const groupLabel = TextStyle(
+      fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, height: 1.2);
+  static const menuLabel =
+      TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, height: 1.3);
+  static const notifTitle = TextStyle(fontSize: 14, height: 1.3);
+  static const notifBody = TextStyle(fontSize: 13, height: 1.35);
+  static const chatName =
+      TextStyle(fontSize: 15, fontWeight: FontWeight.w800, height: 1.25);
+  static const chatPreview = TextStyle(fontSize: 13, height: 1.35);
+  static const bubble = TextStyle(fontSize: 15, height: 1.4);
+  static const chatMeta = TextStyle(fontSize: 12, height: 1.2);
+  static const dokumen = TextStyle(fontSize: 16, height: 1.6);
 }
 
 abstract final class AppTheme {
@@ -164,7 +177,7 @@ abstract final class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: scheme.surface,
         modalBackgroundColor: scheme.surface,
-        surfaceTintColor: Colors.transparent,
+        surfaceTintColor: AppPalette.transparent,
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.sheetTop),
         showDragHandle: true,
         dragHandleColor: colors.border,
@@ -194,9 +207,10 @@ abstract final class AppTheme {
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.inputAll),
         contentTextStyle: text.bodyMedium?.copyWith(color: scheme.onInverseSurface),
       ),
-      pageTransitionsTheme: const PageTransitionsTheme(
+      pageTransitionsTheme: PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          for (final p in TargetPlatform.values)
+            p: const AppPageTransitionsBuilder(),
         },
       ),
     );

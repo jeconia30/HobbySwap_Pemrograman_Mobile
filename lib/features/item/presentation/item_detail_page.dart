@@ -33,14 +33,21 @@ import '../../review/presentation/ulasan_section.dart';
 import '../data/item_providers.dart';
 import '../domain/item.dart';
 import 'kategori_visual.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../chat/presentation/chat_open.dart';
+import '../../favorit/presentation/favorit_button.dart';
 
 /// Jumlah slide foto placeholder selama barang belum punya foto asli.
 const _placeholderPhotos = 3;
 
 class ItemDetailPage extends ConsumerStatefulWidget {
-  const ItemDetailPage({super.key, required this.itemId});
+  const ItemDetailPage({super.key, required this.itemId, this.preview});
 
   final String itemId;
+
+  /// Data kartu asal (Beranda) supaya foto hero langsung tampil selama detail
+  /// dimuat dan animasi Hero mendarat mulus.
+  final ItemListing? preview;
 
   @override
   ConsumerState<ItemDetailPage> createState() => _ItemDetailPageState();
@@ -49,7 +56,6 @@ class ItemDetailPage extends ConsumerStatefulWidget {
 class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
   final _calendarKey = GlobalKey();
   DateSelection _selection = DateSelection.empty;
-  bool _favorit = false;
 
   void _back() =>
       context.canPop() ? context.pop() : context.go(AppRoutes.beranda);
@@ -66,10 +72,11 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     );
   }
 
-  void _toggleFavorit() {
-    HapticFeedback.lightImpact();
-    setState(() => _favorit = !_favorit);
-  }
+  void _tawarBarter() => requireVerified(
+        context,
+        ref,
+        onAllowed: () => context.push(AppRoutes.tawarBarter(widget.itemId)),
+      );
 
   void _ajukan() {
     final s = _selection;
@@ -77,8 +84,8 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     requireVerified(
       context,
       ref,
-      onAllowed: () => context
-          .push(AppRoutes.ajukanSewa(widget.itemId, s.start!, s.end!)),
+      onAllowed: () =>
+          context.push(AppRoutes.ajukanSewa(widget.itemId, s.start!, s.end!)),
     );
   }
 
@@ -89,18 +96,18 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
     return switch (async) {
       AsyncData(value: final listing?) => _content(listing),
       AsyncData() => _message(
-          icon: Icons.inventory_2_outlined,
-          title: 'Barang ini sudah tidak tersedia',
-          actionLabel: 'Ke Beranda',
-          onAction: () => context.go(AppRoutes.beranda),
-        ),
+        icon: Icons.inventory_2_outlined,
+        title: 'Barang ini sudah tidak tersedia',
+        actionLabel: AppTeks.keBeranda,
+        onAction: () => context.go(AppRoutes.beranda),
+      ),
       AsyncError() => _message(
-          icon: Icons.wifi_off_rounded,
-          title: 'Koneksi lagi putus. Coba lagi ya.',
-          actionLabel: 'Coba lagi',
-          onAction: () => ref.invalidate(itemByIdProvider(widget.itemId)),
-        ),
-      _ => _content(ItemCard.placeholder, loading: true),
+        icon: Icons.wifi_off_rounded,
+        title: AppTeks.koneksiPutus,
+        actionLabel: AppTeks.cobaLagi,
+        onAction: () => ref.invalidate(itemByIdProvider(widget.itemId)),
+      ),
+      _ => _content(widget.preview ?? ItemCard.placeholder, loading: true),
     };
   }
 
@@ -150,11 +157,20 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
             left: 0,
             right: 0,
             height: AppSizes.detailHero,
-            child: _Hero(listing: listing),
+            child: Skeleton.keep(
+              keep: !loading || widget.preview != null,
+              child: ItemPhotoHero(
+                itemId: widget.itemId,
+                kategori: listing.item.kategori,
+                enabled: !loading || widget.preview != null,
+                child: _Hero(listing: listing),
+              ),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.only(
-                top: AppSizes.detailHero - AppSizes.detailSheetOverlap),
+              top: AppSizes.detailHero - AppSizes.detailSheetOverlap,
+            ),
             child: _Sheet(
               listing: listing,
               calendar: KeyedSubtree(
@@ -163,7 +179,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
                     ? AppEmptyState(
                         icon: Icons.event_busy_outlined,
                         title: 'Jadwal belum bisa dimuat.',
-                        actionLabel: 'Coba lagi',
+                        actionLabel: AppTeks.cobaLagi,
                         onAction: () =>
                             ref.invalidate(blockedDatesProvider(item.id)),
                       )
@@ -188,27 +204,19 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
               child: Row(
                 children: [
                   AppIconTileButton(
                     icon: Icons.arrow_back_rounded,
-                    tooltip: 'Kembali',
+                    tooltip: AppTeks.kembali,
                     backgroundColor: AppColors.of(context).heroButton,
                     onPressed: _back,
                   ),
                   const Spacer(),
-                  AppIconTileButton(
-                    icon: _favorit
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    tooltip:
-                        _favorit ? 'Hapus dari favorit' : 'Simpan ke favorit',
-                    backgroundColor: AppColors.of(context).heroButton,
-                    iconColor:
-                        _favorit ? Theme.of(context).colorScheme.error : null,
-                    onPressed: loading ? null : _toggleFavorit,
-                  ),
+                  FavoritButton(itemId: widget.itemId, enabled: !loading),
                 ],
               ),
             ),
@@ -222,9 +230,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
       child: Scaffold(
         body: Column(
           children: [
-            Expanded(
-              child: loading ? Skeletonizer(child: body) : body,
-            ),
+            Expanded(child: loading ? Skeletonizer(child: body) : body),
             _BottomBar(
               listing: listing,
               selection: _selection,
@@ -232,6 +238,7 @@ class _ItemDetailPageState extends ConsumerState<ItemDetailPage> {
               enabled: !loading,
               onPickDates: _scrollToCalendar,
               onAjukan: _ajukan,
+              onBarter: _tawarBarter,
             ),
           ],
         ),
@@ -255,8 +262,9 @@ class _HeroState extends State<_Hero> {
   @override
   Widget build(BuildContext context) {
     final item = widget.listing.item;
-    final count =
-        item.daftarFoto.isEmpty ? _placeholderPhotos : item.daftarFoto.length;
+    final count = item.daftarFoto.isEmpty
+        ? _placeholderPhotos
+        : item.daftarFoto.length;
 
     return Semantics(
       label: 'Foto ${item.judul}, ${_page + 1} dari $count',
@@ -281,8 +289,11 @@ class _HeroState extends State<_Hero> {
                 itemCount: count,
                 onPageChanged: (i) => setState(() => _page = i),
                 itemBuilder: (_, _) => Center(
-                  child: Icon(item.kategori.icon,
-                      color: AppPalette.cream, size: AppSizes.detailHeroIcon),
+                  child: Icon(
+                    item.kategori.icon,
+                    color: AppPalette.cream,
+                    size: AppSizes.detailHeroIcon,
+                  ),
                 ),
               ),
             ),
@@ -325,18 +336,23 @@ class _Sheet extends StatelessWidget {
     final muted = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
 
     Widget dot() => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.tight),
-          child: Text('·', style: muted),
-        );
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.tight),
+      child: Text('·', style: muted),
+    );
 
     return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.detailSheet)),
+          top: Radius.circular(AppRadius.detailSheet),
+        ),
       ),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.pageHome,
-          AppSpacing.xl, AppSpacing.pageHome, AppSpacing.xxl),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.pageHome,
+        AppSpacing.xl,
+        AppSpacing.pageHome,
+        AppSpacing.xxl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -349,8 +365,10 @@ class _Sheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.tight),
           Semantics(
             header: true,
-            child: Text(item.judul,
-                style: text.headlineMedium?.merge(AppTextStyles.detailTitle)),
+            child: Text(
+              item.judul,
+              style: text.headlineMedium?.merge(AppTextStyles.detailTitle),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
@@ -359,14 +377,18 @@ class _Sheet extends StatelessWidget {
             children: [
               if (owner.jumlahUlasan > 0)
                 Text.rich(
-                  TextSpan(children: [
-                    TextSpan(
-                      text: '★ ${formatRating(owner.rating)}',
-                      style: TextStyle(
-                          color: colors.warning, fontWeight: FontWeight.w800),
-                    ),
-                    TextSpan(text: ' (${owner.jumlahUlasan})'),
-                  ]),
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '★ ${formatRating(owner.rating)}',
+                        style: TextStyle(
+                          color: colors.warning,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      TextSpan(text: ' (${owner.jumlahUlasan})'),
+                    ],
+                  ),
                   style: muted,
                 )
               else
@@ -377,16 +399,37 @@ class _Sheet extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.place_outlined,
-                      size: AppSizes.iconXs, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.place_outlined,
+                    size: AppSizes.iconXs,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: AppSpacing.xs / 2),
                   Flexible(child: Text(item.lokasiKampus, style: muted)),
                 ],
               ),
             ],
           ),
+          if (item.bisaBarter) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              key: const Key('detail-barter'),
+              children: [
+                Icon(Icons.swap_horiz_rounded,
+                    size: AppSizes.iconSm, color: colors.accentText),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    teksMinatBarter(item.minatBarter),
+                    style: text.bodyMedium?.copyWith(
+                        color: colors.accentText, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: AppSpacing.xl),
-          _OwnerCard(owner: owner),
+          _OwnerCard(owner: owner, itemId: item.id),
           const SizedBox(height: AppSpacing.xl),
           Text('Tentang barang ini', style: text.titleMedium),
           const SizedBox(height: AppSpacing.sm),
@@ -401,13 +444,16 @@ class _Sheet extends StatelessWidget {
   }
 }
 
-class _OwnerCard extends StatelessWidget {
-  const _OwnerCard({required this.owner});
+class _OwnerCard extends ConsumerWidget {
+  const _OwnerCard({required this.owner, required this.itemId});
 
   final User owner;
+  final String itemId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Barang sendiri: tidak ada lawan untuk diajak ngobrol.
+    final sendiri = ref.watch(authControllerProvider)?.id == owner.id;
     final theme = Theme.of(context);
     final verified = owner.statusVerifikasi == StatusVerifikasi.terverifikasi;
     final asal = owner.fakultas ?? 'Kampus USU';
@@ -435,22 +481,23 @@ class _OwnerCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs / 2),
                 Text(
                   '$asal · biasa balas < 1 jam',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
-          AppIconTileButton(
-            icon: Icons.chat_bubble_outline_rounded,
-            tooltip: 'Chat ${owner.nama}',
-            size: AppSizes.chatButton,
-            backgroundColor: AppColors.of(context).surfaceAlt,
-            onPressed: () => ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                  const SnackBar(content: Text('Chat segera hadir'))),
-          ),
+          if (!sendiri)
+            AppIconTileButton(
+              key: const Key('chat-pemilik'),
+              icon: Icons.chat_bubble_outline_rounded,
+              tooltip: 'Chat ${owner.nama}',
+              size: AppSizes.chatButton,
+              backgroundColor: AppColors.of(context).surfaceAlt,
+              onPressed: () =>
+                  bukaObrolan(context, otherUserId: owner.id, itemId: itemId),
+            ),
         ],
       ),
     );
@@ -477,40 +524,42 @@ class _ExpandableTextState extends State<_ExpandableText> {
         ?.merge(AppTextStyles.lead)
         .copyWith(color: theme.colorScheme.onSurfaceVariant);
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final painter = TextPainter(
-        text: TextSpan(text: widget.text, style: style),
-        maxLines: _maxLines,
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-      )..layout(maxWidth: constraints.maxWidth);
-      final overflows = painter.didExceedMaxLines;
-      painter.dispose();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(text: widget.text, style: style),
+          maxLines: _maxLines,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final overflows = painter.didExceedMaxLines;
+        painter.dispose();
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AnimatedSize(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : AppDurations.short,
-            alignment: Alignment.topCenter,
-            child: Text(
-              widget.text,
-              style: style,
-              maxLines: _expanded ? null : _maxLines,
-              overflow: _expanded ? null : TextOverflow.ellipsis,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AnimatedSize(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : AppDurations.short,
+              alignment: Alignment.topCenter,
+              child: Text(
+                widget.text,
+                style: style,
+                maxLines: _expanded ? null : _maxLines,
+                overflow: _expanded ? null : TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          if (overflows)
-            TextButton(
-              onPressed: () => setState(() => _expanded = !_expanded),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              child: Text(_expanded ? 'Lebih sedikit' : 'Selengkapnya'),
-            ),
-        ],
-      );
-    });
+            if (overflows)
+              TextButton(
+                onPressed: () => setState(() => _expanded = !_expanded),
+                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                child: Text(_expanded ? 'Lebih sedikit' : 'Selengkapnya'),
+              ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -522,6 +571,7 @@ class _BottomBar extends StatelessWidget {
     required this.enabled,
     required this.onPickDates,
     required this.onAjukan,
+    required this.onBarter,
   });
 
   final ItemListing listing;
@@ -530,6 +580,7 @@ class _BottomBar extends StatelessWidget {
   final bool enabled;
   final VoidCallback onPickDates;
   final VoidCallback onAjukan;
+  final VoidCallback onBarter;
 
   @override
   Widget build(BuildContext context) {
@@ -539,6 +590,10 @@ class _BottomBar extends StatelessWidget {
     final colors = AppColors.of(context);
     final harga = listing.item.hargaPerHari;
     final inset = MediaQuery.paddingOf(context).bottom;
+    // Tombol barter hanya untuk barang orang lain yang menerima barter.
+    final bisaBarter = listing.item.bisaBarter &&
+        !isOwn &&
+        listing.status != ItemStatus.nonaktif;
 
     final Widget info;
     final Widget button;
@@ -563,19 +618,37 @@ class _BottomBar extends StatelessWidget {
         ],
       );
     } else {
-      info = Text.rich(
-        TextSpan(children: [
-          TextSpan(
-            text: formatRupiah(harga),
-            style: AppTextStyles.price.copyWith(color: colors.accentText),
+      final denda = listing.item.dendaPerHari;
+      info = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: formatRupiah(harga),
+                  style:
+                      AppTextStyles.price.copyWith(color: colors.accentText),
+                ),
+                TextSpan(
+                  text: '/hari',
+                  style: AppTextStyles.priceUnit.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            style: text.bodyMedium,
           ),
-          TextSpan(
-            text: '/hari',
-            style: AppTextStyles.priceUnit
+          Text(
+            teksDenda(denda),
+            key: const Key('detail-denda'),
+            style: text.bodySmall
+                ?.merge(AppTextStyles.small)
                 .copyWith(color: scheme.onSurfaceVariant),
           ),
-        ]),
-        style: text.bodyMedium,
+        ],
       );
     }
 
@@ -606,13 +679,32 @@ class _BottomBar extends StatelessWidget {
         math.max(AppSpacing.detailBarBottom, inset + AppSpacing.md),
       ),
       children: [
-        Row(
-          children: [
-            Expanded(child: info),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: button),
-          ],
-        ),
+        if (bisaBarter) ...[
+          info,
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  key: const Key('detail-tawar-barter'),
+                  label: 'Tawarkan barter',
+                  variant: AppButtonVariant.outline,
+                  icon: const Icon(Icons.swap_horiz_rounded),
+                  onPressed: enabled ? onBarter : null,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: button),
+            ],
+          ),
+        ] else
+          Row(
+            children: [
+              Expanded(child: info),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: button),
+            ],
+          ),
       ],
     );
   }

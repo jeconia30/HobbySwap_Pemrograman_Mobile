@@ -27,6 +27,10 @@ abstract class HandoverChecklist with _$HandoverChecklist {
   const factory HandoverChecklist({
     required String bookingId,
     required TahapChecklist tahap,
+
+    /// Barang yang dicek. `null` = barang utama sewa; untuk barter, barang
+    /// tawaran punya checklist sendiri (M11).
+    String? itemId,
     @Default(<KondisiItem>[]) List<KondisiItem> daftarKondisi,
     @Default(false) bool disetujuiPemilik,
     @Default(false) bool disetujuiPenyewa,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hobby_swab/core/router/app_routes.dart';
 import 'package:hobby_swab/core/widgets/app_button.dart';
 import 'package:hobby_swab/features/home/presentation/home_page.dart';
 import 'package:hobby_swab/features/item/presentation/item_form_page.dart';
@@ -83,13 +84,21 @@ void main() {
     expect(find.text('KTM-mu sedang ditinjau'), findsOneWidget);
     expect(find.text('Jelajah barang dulu'), findsOneWidget);
 
-    final approve = find.text('Simulasikan disetujui (debug)');
-    await tester.ensureVisible(approve);
+    // Persetujuan simulasi ada di Profil → Alat pengembang.
+    await tester.tap(find.text('Jelajah barang dulu'));
     await tester.pumpAndSettle();
+    await openTab(tester, 'Profil');
+    final approve = find.byKey(const Key('debug-setujui-ktm'));
+    await scrollProfilTo(tester, approve);
     await tester.tap(approve);
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('debug-setujui-ktm')), findsNothing);
+    // Tunggu SnackBar konfirmasi hilang supaya tidak menutupi tombol.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    await pushRoute(tester, AppRoutes.verifikasiStatus);
     expect(find.text('Akunmu sudah aktif!'), findsOneWidget);
-    expect(find.text('Simulasikan disetujui (debug)'), findsNothing);
 
     await tester.tap(find.text('Mulai jelajah'));
     await tester.pumpAndSettle();

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +16,7 @@ import '../../auth/presentation/auth_controller.dart';
 import '../domain/verification_repository.dart';
 import 'verification_actions.dart';
 import 'verification_previews.dart';
+import '../../../core/constants/app_strings.dart';
 
 enum _Slot { ktm, selfie }
 
@@ -100,7 +100,6 @@ class _VerifikasiPageState extends ConsumerState<VerifikasiPage> {
     try {
       await ref.read(verificationActionsProvider).submit(ktm, selfie);
       if (!mounted) return;
-      HapticFeedback.lightImpact();
       context.go(AppRoutes.verifikasiStatus);
     } on VerificationException catch (e) {
       if (!mounted) return;
@@ -112,7 +111,7 @@ class _VerifikasiPageState extends ConsumerState<VerifikasiPage> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _errorMessage = 'Koneksi lagi putus. Coba lagi ya.';
+        _errorMessage = AppTeks.koneksiPutus;
       });
     }
   }

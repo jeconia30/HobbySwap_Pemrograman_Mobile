@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/dates.dart';
 import '../domain/item.dart';
 
-/// Chip status barang milik sendiri (Tersedia / Disewa / Nonaktif).
+/// Chip status barang milik sendiri (Tersedia / Disewa / Dibarter / Nonaktif).
 class ItemStatusChip extends StatelessWidget {
-  const ItemStatusChip(this.status, {super.key});
+  const ItemStatusChip(this.status, {super.key, this.sampai});
 
   final ItemStatus status;
+
+  /// Tanggal kembali (barang yang sedang dibarter).
+  final DateTime? sampai;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +23,10 @@ class ItemStatusChip extends StatelessWidget {
           colors.verified.withValues(alpha: 0.16),
           colors.verified
         ),
-      ItemStatus.disewa => (colors.accentSoft, colors.accentText),
+      ItemStatus.disewa || ItemStatus.dibarter => (
+          colors.accentSoft,
+          colors.accentText
+        ),
       ItemStatus.nonaktif => (
           colors.surfaceAlt,
           theme.colorScheme.onSurfaceVariant
@@ -32,7 +39,10 @@ class ItemStatusChip extends StatelessWidget {
           vertical: AppSpacing.xs),
       decoration: BoxDecoration(color: bg, borderRadius: AppRadius.pillAll),
       child: Text(
-        status.label,
+        status == ItemStatus.dibarter && sampai != null
+            ? '${status.label} · kembali ${formatTanggalPendek(sampai!)}'
+            : status.label,
+        textAlign: TextAlign.center,
         style: theme.textTheme.labelSmall
             ?.copyWith(color: fg, fontWeight: FontWeight.w700),
       ),

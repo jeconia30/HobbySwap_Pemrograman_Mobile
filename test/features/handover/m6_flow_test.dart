@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_swab/core/router/app_routes.dart';
 import 'package:hobby_swab/core/widgets/app_button.dart';
+import 'package:hobby_swab/data/fake/fake_booking_store.dart';
+import 'package:hobby_swab/features/booking/domain/booking.dart';
 import 'package:hobby_swab/features/booking/presentation/sewaan_page.dart';
 import 'package:hobby_swab/features/handover/data/checklist_providers.dart';
 import 'package:hobby_swab/features/handover/domain/handover_checklist.dart';
@@ -25,6 +27,10 @@ void main() {
   }
 
   Future<void> tapVisible(WidgetTester tester, Finder f) async {
+    if (f.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(f, 200,
+          scrollable: find.byType(Scrollable).first);
+    }
     await tester.ensureVisible(f);
     await tester.pumpAndSettle();
     await tester.tap(f);
@@ -35,34 +41,51 @@ void main() {
       tester.widget<AppButton>(find.byKey(key));
 
   group('Sewaan Saya', () {
-    testWidgets('Segmen Aktif/Menunggu/Riwayat dan kartu sesuai status',
-        (tester) async {
+    testWidgets('Segmen Aktif/Menunggu/Riwayat dan kartu sesuai status', (
+      tester,
+    ) async {
       await openSewaan(tester);
 
-      expect(find.text('Aktif · 2'), findsOneWidget);
+      expect(find.text('Aktif · 3'), findsOneWidget);
       expect(find.text('Menunggu · 1'), findsOneWidget);
       expect(find.text('Kembalikan dalam 1 hari'), findsOneWidget);
-      expect(find.text('Checklist pengembalian'), findsOneWidget);
+      // Sony (sewa) + Keyboard (barter, M11) sedang berlangsung.
+      expect(find.text('Checklist pengembalian'), findsWidgets);
+      await tester.scrollUntilVisible(find.text('Checklist ambil barang'), 200,
+          scrollable: find.byType(Scrollable).first);
       expect(find.text('Checklist ambil barang'), findsOneWidget);
       expect(find.textContaining('dari Rizky N.'), findsOneWidget);
 
+      await tester.scrollUntilVisible(
+          find.byKey(const Key('segmen-riwayat')), -200,
+          scrollable: find.byType(Scrollable).first);
       await tester.tap(find.byKey(const Key('segmen-riwayat')));
       await tester.pumpAndSettle();
-      expect(find.text('Alasan pemilik: Barang sedang dipakai'), findsOneWidget);
+      expect(
+        find.text('Alasan pemilik: Barang sedang dipakai'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('Kartu "Beri rating" hanya untuk sewa selesai yang belum dirating',
-        (tester) async {
-      await openSewaan(tester);
-      await tester.tap(find.byKey(const Key('segmen-riwayat')));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'Kartu "Beri rating" hanya untuk sewa selesai yang belum dirating',
+      (tester) async {
+        await openSewaan(tester);
+        await tester.tap(find.byKey(const Key('segmen-riwayat')));
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('rating-prompt-$tenda')), findsOneWidget);
-      expect(find.textContaining('Beri rating untuk'), findsOneWidget);
-      expect(find.text('Beri rating untuk Tenda Dome 4 Orang'), findsOneWidget);
-    });
+        expect(find.byKey(const Key('rating-prompt-$tenda')), findsOneWidget);
+        expect(find.textContaining('Beri rating untuk'), findsOneWidget);
+        expect(
+          find.text('Beri rating untuk Tenda Dome 4 Orang'),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('Batalkan pengajuan menunggu lewat bottom sheet', (tester) async {
+    testWidgets('Batalkan pengajuan menunggu lewat bottom sheet', (
+      tester,
+    ) async {
       await openSewaan(tester);
       await tester.tap(find.byKey(const Key('segmen-menunggu')));
       await tester.pumpAndSettle();
@@ -82,8 +105,9 @@ void main() {
   });
 
   group('Checklist serah terima', () {
-    testWidgets('Segmen Akhir nonaktif sebelum tahap awal selesai',
-        (tester) async {
+    testWidgets('Segmen Akhir nonaktif sebelum tahap awal selesai', (
+      tester,
+    ) async {
       await openSewaan(tester);
       await tapVisible(tester, find.byKey(const Key('checklist-$gopro')));
       await waitRepo(tester);
@@ -100,57 +124,80 @@ void main() {
     });
 
     testWidgets(
-        'Aturan foto, lalu kedua pihak setuju → berlangsung & kembali ke Sewaan',
-        (tester) async {
-      await openSewaan(tester);
-      await tapVisible(tester, find.byKey(const Key('checklist-$gopro')));
-      await waitRepo(tester);
-      expect(find.textContaining('0 dari 5 dicek', findRichText: true),
-          findsOneWidget);
+      'Aturan foto, lalu kedua pihak setuju → berlangsung & kembali ke Sewaan',
+      (tester) async {
+        await openSewaan(tester);
+        await tapVisible(tester, find.byKey(const Key('checklist-$gopro')));
+        await waitRepo(tester);
+        expect(
+          find.textContaining('0 dari 5 dicek', findRichText: true),
+          findsOneWidget,
+        );
 
-      final setujui = find.byKey(const Key('checklist-setujui'));
-      await tapVisible(tester, setujui);
-      expect(find.textContaining('Tambahkan minimal 2 foto bukti.'),
-          findsOneWidget);
+        final setujui = find.byKey(const Key('checklist-setujui'));
+        await tapVisible(tester, setujui);
+        expect(
+          find.textContaining('Tambahkan minimal 2 foto bukti.'),
+          findsOneWidget,
+        );
 
-      for (var i = 0; i < 5; i++) {
-        await tapVisible(tester, find.byKey(Key('kondisi-$i')));
-      }
-      await tapVisible(tester, find.byKey(const Key('foto-0')));
-      await tapVisible(tester, find.byKey(const Key('foto-1')));
-      expect(find.textContaining('5 dari 5 dicek', findRichText: true),
-          findsOneWidget);
+        for (var i = 0; i < 5; i++) {
+          await tapVisible(tester, find.byKey(Key('kondisi-$i')));
+        }
+        await tapVisible(tester, find.byKey(const Key('foto-0')));
+        await tapVisible(tester, find.byKey(const Key('foto-1')));
+        expect(
+          find.textContaining('5 dari 5 dicek', findRichText: true),
+          findsOneWidget,
+        );
 
-      await tapVisible(tester, setujui);
-      await waitRepo(tester);
-      expect(find.text('Menunggu Dimas menyetujui…'), findsOneWidget);
+        await tapVisible(tester, setujui);
+        await waitRepo(tester);
+        expect(find.text('Menunggu Dimas menyetujui…'), findsOneWidget);
 
-      // Pemilik (Dimas) menyetujui dari perangkatnya.
-      // Jangan di-await langsung: jeda repo hanya berjalan saat dipompa.
-      final dimasSetuju = appContainer(tester)
-          .read(checklistRepositoryProvider)
-          .approve(gopro, TahapChecklist.awal, 'usr-005');
-      await waitRepo(tester);
-      await dimasSetuju;
+        // M10: Dimas mencatat pembayaran COD, lalu menyetujui dari perangkatnya.
+        final store = appContainer(tester).read(fakeBookingStoreProvider);
+        store.update(
+          store
+              .byId(gopro)!
+              .copyWith(
+                statusBayar: StatusBayar.lunas,
+                metodeBayar: MetodeBayar.tunai,
+              ),
+        );
+        // Jangan di-await langsung: jeda repo hanya berjalan saat dipompa.
+        final dimasSetuju = appContainer(tester)
+            .read(checklistRepositoryProvider)
+            .approve(gopro, TahapChecklist.awal, 'usr-005');
+        await waitRepo(tester);
+        await dimasSetuju;
 
-      expect(find.text('Serah terima beres. Selamat memakai!'), findsOneWidget);
-      await waitRepo(tester);
-      expect(find.byType(SewaanPage), findsOneWidget);
-      expect(find.text('Checklist ambil barang'), findsNothing);
-      expect(find.text('Checklist pengembalian'), findsNWidgets(2));
-    });
+        expect(
+          find.text('Serah terima beres. Selamat memakai!'),
+          findsOneWidget,
+        );
+        await waitRepo(tester);
+        expect(find.byType(SewaanPage), findsOneWidget);
+        expect(find.text('Checklist ambil barang'), findsNothing);
+        expect(find.text('Checklist pengembalian'), findsWidgets);
+        expect(find.byKey(const Key('checklist-$gopro')), findsOneWidget);
+      },
+    );
 
-    testWidgets('Pengembalian disetujui kedua pihak → layar rating',
-        (tester) async {
+    testWidgets('Pengembalian disetujui kedua pihak → layar rating', (
+      tester,
+    ) async {
       await openSewaan(tester);
       await tapVisible(tester, find.byKey(const Key('checklist-$sony')));
       await waitRepo(tester);
       expect(find.text('Setujui pengembalian'), findsOneWidget);
-      expect(find.text('Ada masalah dengan barang?'), findsOneWidget);
+      // Ada item belum dicentang: tombol laporan kerusakan tersedia.
+      expect(find.byKey(const Key('laporkan-kerusakan')), findsOneWidget);
 
       for (var i = 0; i < 5; i++) {
         await tapVisible(tester, find.byKey(Key('kondisi-$i')));
       }
+      expect(find.byKey(const Key('laporkan-kerusakan')), findsNothing);
       await tapVisible(tester, find.byKey(const Key('foto-0')));
       await tapVisible(tester, find.byKey(const Key('foto-2')));
       await tapVisible(tester, find.byKey(const Key('checklist-setujui')));
@@ -177,8 +224,9 @@ void main() {
       expect(find.byType(RatingPage), findsOneWidget);
     }
 
-    testWidgets('"Kirim ulasan" nonaktif sebelum bintang dipilih',
-        (tester) async {
+    testWidgets('"Kirim ulasan" nonaktif sebelum bintang dipilih', (
+      tester,
+    ) async {
       await openRating(tester);
       expect(find.textContaining('disewakan Sarah Manurung'), findsOneWidget);
       expect(button(tester, const Key('rating-kirim')).onPressed, isNull);
@@ -189,8 +237,9 @@ void main() {
       expect(find.textContaining('Bagus', findRichText: true), findsOneWidget);
     });
 
-    testWidgets('Bintang 2 tanpa cerita memunculkan pesan; lalu terkirim',
-        (tester) async {
+    testWidgets('Bintang 2 tanpa cerita memunculkan pesan; lalu terkirim', (
+      tester,
+    ) async {
       await openRating(tester);
       await tester.tap(find.byKey(const Key('bintang-2')));
       await tester.pump();
@@ -198,23 +247,28 @@ void main() {
       expect(find.byKey(const Key('rating-cerita-error')), findsOneWidget);
 
       await tester.enterText(
-          find.descendant(
-              of: find.byKey(const Key('rating-cerita')),
-              matching: find.byType(EditableText)),
-          'Tendanya bocor sedikit di sudut.');
+        find.descendant(
+          of: find.byKey(const Key('rating-cerita')),
+          matching: find.byType(EditableText),
+        ),
+        'Tendanya bocor sedikit di sudut.',
+      );
       await tester.tap(find.text('Tepat waktu'));
       await tapVisible(tester, find.byKey(const Key('rating-kirim')));
       await waitRepo(tester);
 
-      expect(find.text('Makasih! Ulasanmu membantu mahasiswa lain.'),
-          findsOneWidget);
+      expect(
+        find.text('Makasih! Ulasanmu membantu mahasiswa lain.'),
+        findsOneWidget,
+      );
       expect(find.byType(SewaanPage), findsOneWidget);
       expect(find.byKey(const Key('rating-prompt-$tenda')), findsNothing);
     });
   });
 
-  testWidgets('Barang Saya: aksi checklist & beri rating penyewa',
-      (tester) async {
+  testWidgets('Barang Saya: aksi checklist & beri rating penyewa', (
+    tester,
+  ) async {
     await pumpApp(tester, sessionUserId: gregorian);
     await openTab(tester, 'Barang');
     await waitRepo(tester);
@@ -222,8 +276,11 @@ void main() {
     Future<void> openRow(String id) async {
       final row = find.byKey(Key('item-row-$id'));
       if (row.evaluate().isEmpty) {
-        await tester.scrollUntilVisible(row, 200,
-            scrollable: find.byType(Scrollable).first);
+        await tester.scrollUntilVisible(
+          row,
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
       }
       await tapVisible(tester, row);
     }
@@ -243,8 +300,9 @@ void main() {
     expect(find.text('Barang dijaga baik'), findsOneWidget);
   });
 
-  testWidgets('Detail Barang: bagian ulasan & halaman semua ulasan',
-      (tester) async {
+  testWidgets('Detail Barang: bagian ulasan & halaman semua ulasan', (
+    tester,
+  ) async {
     await pumpApp(tester, sessionUserId: 'usr-004');
     await pushRoute(tester, AppRoutes.barangDetail('itm-001'));
     await waitRepo(tester);
@@ -252,10 +310,14 @@ void main() {
     final section = find.byKey(const Key('ulasan-section'));
     await tester.ensureVisible(section);
     await tester.pumpAndSettle();
-    expect(find.descendant(of: section, matching: find.text('Ulasan')),
-        findsOneWidget);
-    expect(find.textContaining('ulasan untuk Rizky Nugraha', findRichText: true),
-        findsWidgets);
+    expect(
+      find.descendant(of: section, matching: find.text('Ulasan')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('ulasan untuk Rizky Nugraha', findRichText: true),
+      findsWidgets,
+    );
 
     await tester.tap(find.text('Lihat semua'));
     await waitRepo(tester);
@@ -263,8 +325,9 @@ void main() {
     expect(find.text('Sarah Manurung'), findsWidgets);
   });
 
-  testWidgets('Font sistem besar (2×): Sewaan, checklist, rating',
-      (tester) async {
+  testWidgets('Font sistem besar (2×): Sewaan, checklist, rating', (
+    tester,
+  ) async {
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 

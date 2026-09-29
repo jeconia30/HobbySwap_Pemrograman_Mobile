@@ -43,7 +43,7 @@ void main() {
     expect(find.text('Disewa 58×'), findsOneWidget);
     expect(find.text('Rizky Nugraha'), findsOneWidget);
     expect(find.text('Terverifikasi'), findsOneWidget);
-    expect(find.text('FT USU · biasa balas < 1 jam'), findsOneWidget);
+    expect(find.text('Teknik · biasa balas < 1 jam'), findsOneWidget);
     expect(find.text('Pilih tanggal'), findsOneWidget);
     expect(find.textContaining('Rp45.000', findRichText: true), findsWidgets);
   });

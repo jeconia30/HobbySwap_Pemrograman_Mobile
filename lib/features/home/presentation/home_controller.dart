@@ -26,11 +26,13 @@ class HomeFilterController extends Notifier<ItemFilter> {
     required ItemSort sort,
     required int? hargaMaks,
     required bool hanyaTersedia,
+    bool hanyaBarter = false,
   }) =>
       state = state.copyWith(
         sort: sort,
         hargaMaks: hargaMaks,
         hanyaTersedia: hanyaTersedia,
+        hanyaBarter: hanyaBarter,
       );
 
   void reset() => state = const ItemFilter();
@@ -46,6 +48,7 @@ final homeItemsProvider = FutureProvider.autoDispose<List<ItemListing>>(
           sort: f.sort,
           hargaMaks: f.hargaMaks,
           hanyaTersedia: f.hanyaTersedia,
+          hanyaBarter: f.hanyaBarter,
         );
   },
   // Error ditampilkan dengan tombol "Coba lagi", bukan dicoba ulang diam-diam.

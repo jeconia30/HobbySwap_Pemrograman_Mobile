@@ -31,6 +31,11 @@ abstract final class AppSpacing {
   /// Padding samping layar rating.
   static const double pageRating = 24;
 
+  /// Gelembung pesan: padding 10/14, jarak antarpesan dirapatkan 2.
+  static const EdgeInsets bubble =
+      EdgeInsets.symmetric(vertical: 10, horizontal: 14);
+  static const double bubbleRapat = 2;
+
   /// Jarak konten bawah Splash dari tepi layar.
   static const double splashBottom = 64;
 }
@@ -40,8 +45,6 @@ abstract final class AppRadius {
   static const double button = 16;
   static const double input = 14;
   static const double sheet = 28;
-  static const double logoMark = 17;
-  static const double logoMarkLarge = 32;
   static const double checkbox = 6;
   static const double note = 16;
   static const double preview = 12;
@@ -49,7 +52,12 @@ abstract final class AppRadius {
   static const double calendarCell = 12;
   static const double ownerCard = 18;
   static const double listRow = 18;
+  static const double menuIcon = 10;
   static const double detailSheet = 26;
+  static const double bubble = 18;
+  static const double bubbleTail = 4;
+  static const double fotoPesan = 14;
+  static const double composer = 22;
   static const double pill = 999;
 
   static const BorderRadius cardAll = BorderRadius.all(Radius.circular(card));
@@ -65,11 +73,24 @@ abstract final class AppRadius {
 }
 
 abstract final class AppSizes {
+  /// Skala saat ditekan (DESIGN §5).
+  static const double pressScale = 0.97;
+
+  /// Geser halus transisi halaman.
+  static const double pageSlide = 16;
+
   static const double buttonHeight = 56;
   static const double fieldHeight = 54;
   static const double minTapTarget = 48;
   static const double logoMark = 56;
-  static const double logoMarkLarge = 112;
+
+  /// Logo di Splash = gambar splash native (splash_logo.png 600 px @4x).
+  static const double splashLogo = 150;
+
+  /// Sudut tile di logo_tile.png, relatif terhadap sisi gambar.
+  static const double logoTileCornerRatio = 0.2;
+  static const double logoShadowBlur = 18;
+  static const double logoShadowOffset = 6;
 
   /// Indikator halaman: titik [pageDot] & pill aktif [pageDotActive] lebar.
   static const double pageDot = 8;
@@ -136,7 +157,46 @@ abstract final class AppSizes {
   static const double starIcon = 44;
   static const double avatarSm = 32;
   static const double avatarReview = 36;
+
+  /// Profil, pengaturan, aktivitas.
+  static const double avatarProfile = 72;
+  static const double avatarEdit = 88;
+  static const double menuRow = 54;
+  static const double menuIcon = 34;
+  static const double notifIcon = 40;
+  static const double unreadDot = 8;
+  static const double colorSwatch = 40;
+  static const Size themePreview = Size(56, 40);
+  static const double logoutButton = 52;
   static const double calendarCell = 40;
+
+  /// Dokumen panjang: lebar baca ±65 karakter pada teks 16, nomor bagian.
+  static const double lebarBacaan = 560;
+  static const double nomorBagian = 28;
+
+  /// Tombol hati di pojok foto kartu (area sentuh tetap 48).
+  static const double favoritKartu = 32;
+
+  /// Lebar minimal satu kolom statistik Profil (di bawahnya jadi 2×2).
+  static const double statKolomMin = 84;
+
+  /// Label indikator kekuatan password.
+  static const double kekuatanLabel = 56;
+
+  /// Pesan (M9).
+  static const double chatRow = 76;
+  static const double avatarChat = 48;
+  static const double avatarChatHeader = 40;
+  static const double chatMiniTile = 16;
+  static const double chatUnreadBadge = 22;
+  static const double chatTile = 44;
+  static const double chatSend = 44;
+  static const double codCard = 260;
+  static const double codIcon = 40;
+  static const Size fotoPesan = Size(200, 150);
+
+  /// Lebar maksimal gelembung pesan, relatif terhadap lebar layar.
+  static const double bubbleMaxFraction = 0.75;
 
   /// Ilustrasi layar status.
   static const double statusArt = 104;
@@ -148,5 +208,9 @@ abstract final class AppDurations {
   static const Duration press = Duration(milliseconds: 120);
   static const Duration short = Duration(milliseconds: 200);
   static const Duration page = Duration(milliseconds: 300);
+  static const Duration pageTransition = Duration(milliseconds: 250);
+
+  /// Jeda sebelum tautan reset boleh dikirim ulang.
+  static const Duration kirimUlang = Duration(seconds: 60);
   static const Duration splashMinimum = Duration(milliseconds: 1200);
 }

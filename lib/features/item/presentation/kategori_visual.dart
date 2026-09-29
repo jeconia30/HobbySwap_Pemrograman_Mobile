@@ -22,3 +22,8 @@ extension KategoriVisual on Kategori {
         Kategori.lainnya => AppPalette.kategoriLainnya,
       };
 }
+
+/// "Terima barter · mencari: Kamera, Game" (atau tanpa daftar bila kosong).
+String teksMinatBarter(List<Kategori> minat) => minat.isEmpty
+    ? 'Terima barter'
+    : 'Terima barter · mencari: ${minat.map((k) => k.label).join(', ')}';

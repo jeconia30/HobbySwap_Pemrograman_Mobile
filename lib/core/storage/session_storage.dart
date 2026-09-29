@@ -11,12 +11,18 @@ class SessionStorage {
 
   final SharedPreferences _prefs;
 
+  /// Dipakai bersama penyimpanan data demo ([FakePersistence]).
+  SharedPreferences get prefs => _prefs;
+
   static Future<SessionStorage> create() async =>
       SessionStorage(await SharedPreferences.getInstance());
 
   bool get onboardingSeen => _prefs.getBool(onboardingSeenKey) ?? false;
 
   Future<void> setOnboardingSeen() => _prefs.setBool(onboardingSeenKey, true);
+
+  /// Alat pengembang: onboarding tampil lagi saat app dibuka ulang.
+  Future<void> resetOnboarding() => _prefs.remove(onboardingSeenKey);
 
   String? get sessionUserId => _prefs.getString(sessionUserIdKey);
 

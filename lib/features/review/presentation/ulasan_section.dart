@@ -10,16 +10,18 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../auth/domain/user.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../item/data/item_providers.dart';
 import '../data/review_providers.dart';
 import '../domain/review.dart';
 import 'review_tile.dart';
+import '../../../core/constants/app_strings.dart';
 
 /// Ulasan penyewa untuk pemilik barang (yang membentuk rating di kartu).
 List<ReviewDetail> _untukPemilik(List<ReviewDetail> all) => [
-      for (final r in all)
-        if (r.review.peran == PeranUlasan.penyewaMenilaiPemilik) r,
-    ];
+  for (final r in all)
+    if (r.review.peran == PeranUlasan.penyewaMenilaiPemilik) r,
+];
 
 class _Ringkasan extends StatelessWidget {
   const _Ringkasan({required this.owner});
@@ -31,17 +33,21 @@ class _Ringkasan extends StatelessWidget {
     final theme = Theme.of(context);
     if (owner.jumlahUlasan == 0) return const SizedBox.shrink();
     return Text.rich(
-      TextSpan(children: [
-        TextSpan(
-          text: '★ ${formatRating(owner.rating)}',
-          style: TextStyle(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '★ ${formatRating(owner.rating)}',
+            style: TextStyle(
               color: AppColors.of(context).warning,
-              fontWeight: FontWeight.w800),
-        ),
-        TextSpan(text: ' · ${owner.jumlahUlasan} ulasan untuk ${owner.nama}'),
-      ]),
-      style: theme.textTheme.bodySmall
-          ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          TextSpan(text: ' · ${owner.jumlahUlasan} ulasan untuk ${owner.nama}'),
+        ],
+      ),
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }
@@ -74,8 +80,7 @@ class UlasanSection extends ConsumerWidget {
             if (list.isNotEmpty)
               Flexible(
                 child: TextButton(
-                  onPressed: () =>
-                      context.push(AppRoutes.ulasanBarang(itemId)),
+                  onPressed: () => context.push(AppRoutes.ulasanBarang(itemId)),
                   child: const Text('Lihat semua', textAlign: TextAlign.end),
                 ),
               ),
@@ -88,8 +93,9 @@ class UlasanSection extends ConsumerWidget {
         else if (list.isEmpty)
           Text(
             'Belum ada ulasan',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           )
         else
           for (final (i, r) in list.take(2).indexed) ...[
@@ -122,54 +128,154 @@ class UlasanPage extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.pageHome, AppSpacing.md,
-              AppSpacing.pageHome, AppSpacing.xxl),
-          children: [
-            Row(
-              children: [
-                AppBackButton(
-                  onPressed: () => context.canPop()
-                      ? context.pop()
-                      : context.go(AppRoutes.barangDetail(itemId)),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child:
-                        Text('Ulasan', style: theme.textTheme.headlineMedium),
+        child: Builder(
+          builder: (context) {
+            final kepala = <Widget>[
+              Row(
+                children: [
+                  AppBackButton(
+                    onPressed: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.barangDetail(itemId)),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            if (owner != null) _Ringkasan(owner: owner),
-            const SizedBox(height: AppSpacing.xl),
-            if (async.hasError)
-              AppEmptyState(
-                icon: Icons.wifi_off_rounded,
-                title: 'Koneksi lagi putus. Coba lagi ya.',
-                actionLabel: 'Coba lagi',
-                onAction: () => ref.invalidate(reviewsForUserProvider),
-              )
-            else if (!async.hasValue)
-              const Skeletonizer(child: Text('Memuat ulasan dari penyewa'))
-            else if (list.isEmpty)
-              const AppEmptyState(
-                  icon: Icons.rate_review_outlined, title: 'Belum ada ulasan')
-            else
-              for (final (i, r) in list.indexed) ...[
-                if (i > 0)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                    child: Divider(),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        'Ulasan',
+                        style: theme.textTheme.headlineMedium,
+                      ),
+                    ),
                   ),
-                ReviewTile(detail: r),
-              ],
-          ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (owner != null) _Ringkasan(owner: owner),
+              const SizedBox(height: AppSpacing.xl),
+              if (async.hasError)
+                AppEmptyState(
+                  icon: Icons.wifi_off_rounded,
+                  title: AppTeks.koneksiPutus,
+                  actionLabel: AppTeks.cobaLagi,
+                  onAction: () => ref.invalidate(reviewsForUserProvider),
+                )
+              else if (!async.hasValue)
+                const Skeletonizer(child: Text('Memuat ulasan dari penyewa'))
+              else if (list.isEmpty)
+                const AppEmptyState(
+                  icon: Icons.rate_review_outlined,
+                  title: 'Belum ada ulasan',
+                ),
+            ];
+            final tampil = async.hasValue && !async.hasError
+                ? list
+                : const <ReviewDetail>[];
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.pageHome,
+                AppSpacing.md,
+                AppSpacing.pageHome,
+                AppSpacing.xxl,
+              ),
+              itemCount: kepala.length + tampil.length,
+              itemBuilder: (context, i) {
+                if (i < kepala.length) return kepala[i];
+                final j = i - kepala.length;
+                final tile = ReviewTile(detail: tampil[j]);
+                return j == 0 ? tile : Column(children: [_pemisah, tile]);
+              },
+            );
+          },
         ),
       ),
     );
   }
 }
+
+/// /profil/ulasan — semua ulasan yang diterima user yang sedang masuk
+/// (sebagai pemilik maupun penyewa).
+class UlasanTentangkuPage extends ConsumerWidget {
+  const UlasanTentangkuPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final user = ref.watch(authControllerProvider);
+    final async = user == null
+        ? const AsyncValue<List<ReviewDetail>>.data([])
+        : ref.watch(reviewsForUserProvider(user.id));
+    final list = async.value ?? const <ReviewDetail>[];
+
+    return Scaffold(
+      body: SafeArea(
+        child: Builder(
+          builder: (context) {
+            final kepala = <Widget>[
+              Row(
+                children: [
+                  AppBackButton(
+                    onPressed: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.profil),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        'Ulasan tentangku',
+                        style: theme.textTheme.headlineMedium,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (user != null) _Ringkasan(owner: user),
+              const SizedBox(height: AppSpacing.xl),
+              if (async.hasError)
+                AppEmptyState(
+                  icon: Icons.wifi_off_rounded,
+                  title: AppTeks.koneksiPutus,
+                  actionLabel: AppTeks.cobaLagi,
+                  onAction: () => ref.invalidate(reviewsForUserProvider),
+                )
+              else if (!async.hasValue)
+                const Skeletonizer(child: Text('Memuat ulasan untukmu'))
+              else if (list.isEmpty)
+                const AppEmptyState(
+                  icon: Icons.rate_review_outlined,
+                  title: 'Belum ada ulasan tentangmu',
+                  message: 'Ulasan muncul setelah sewa selesai.',
+                ),
+            ];
+            final tampil = async.hasValue && !async.hasError
+                ? list
+                : const <ReviewDetail>[];
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.pageHome,
+                AppSpacing.md,
+                AppSpacing.pageHome,
+                AppSpacing.xxl,
+              ),
+              itemCount: kepala.length + tampil.length,
+              itemBuilder: (context, i) {
+                if (i < kepala.length) return kepala[i];
+                final j = i - kepala.length;
+                final tile = ReviewTile(detail: tampil[j]);
+                return j == 0 ? tile : Column(children: [_pemisah, tile]);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+const _pemisah = Padding(
+  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+  child: Divider(),
+);

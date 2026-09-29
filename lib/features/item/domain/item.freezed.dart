@@ -290,7 +290,10 @@ as DateTime,
 mixin _$Item {
 
  String get id; String get ownerId; String get judul; String get deskripsi; Kategori get kategori; int get hargaPerHari; List<String> get daftarFoto; String get lokasiKampus; List<RentangTanggal> get rentangTidakTersedia; int get jumlahDisewa;/// Diatur pemilik; `false` = tidak tampil di Beranda & tidak bisa disewa.
- bool get aktif;
+ bool get aktif;/// Denda keterlambatan per hari (Rp); 0 = tanpa denda (M10).
+ int get dendaPerHari;/// Pemilik menerima tawaran barter (tukar pinjam sementara, M11).
+ bool get bisaBarter;/// Kategori barang yang dicari pemilik untuk barter.
+ List<Kategori> get minatBarter;
 /// Create a copy of Item
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -304,20 +307,20 @@ $ItemCopyWith<Item> get copyWith => _$ItemCopyWithImpl<Item>(this as Item, _$ide
 @override
 bool operator ==(Object other) {
   final _this = this as Item;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Item&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.ownerId, _this.ownerId) || other.ownerId == _this.ownerId)&&(identical(other.judul, _this.judul) || other.judul == _this.judul)&&(identical(other.deskripsi, _this.deskripsi) || other.deskripsi == _this.deskripsi)&&(identical(other.kategori, _this.kategori) || other.kategori == _this.kategori)&&(identical(other.hargaPerHari, _this.hargaPerHari) || other.hargaPerHari == _this.hargaPerHari)&&const DeepCollectionEquality().equals(other.daftarFoto, _this.daftarFoto)&&(identical(other.lokasiKampus, _this.lokasiKampus) || other.lokasiKampus == _this.lokasiKampus)&&const DeepCollectionEquality().equals(other.rentangTidakTersedia, _this.rentangTidakTersedia)&&(identical(other.jumlahDisewa, _this.jumlahDisewa) || other.jumlahDisewa == _this.jumlahDisewa)&&(identical(other.aktif, _this.aktif) || other.aktif == _this.aktif));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Item&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.ownerId, _this.ownerId) || other.ownerId == _this.ownerId)&&(identical(other.judul, _this.judul) || other.judul == _this.judul)&&(identical(other.deskripsi, _this.deskripsi) || other.deskripsi == _this.deskripsi)&&(identical(other.kategori, _this.kategori) || other.kategori == _this.kategori)&&(identical(other.hargaPerHari, _this.hargaPerHari) || other.hargaPerHari == _this.hargaPerHari)&&const DeepCollectionEquality().equals(other.daftarFoto, _this.daftarFoto)&&(identical(other.lokasiKampus, _this.lokasiKampus) || other.lokasiKampus == _this.lokasiKampus)&&const DeepCollectionEquality().equals(other.rentangTidakTersedia, _this.rentangTidakTersedia)&&(identical(other.jumlahDisewa, _this.jumlahDisewa) || other.jumlahDisewa == _this.jumlahDisewa)&&(identical(other.aktif, _this.aktif) || other.aktif == _this.aktif)&&(identical(other.dendaPerHari, _this.dendaPerHari) || other.dendaPerHari == _this.dendaPerHari)&&(identical(other.bisaBarter, _this.bisaBarter) || other.bisaBarter == _this.bisaBarter)&&const DeepCollectionEquality().equals(other.minatBarter, _this.minatBarter));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Item;
-  return Object.hash(runtimeType,_this.id,_this.ownerId,_this.judul,_this.deskripsi,_this.kategori,_this.hargaPerHari,const DeepCollectionEquality().hash(_this.daftarFoto),_this.lokasiKampus,const DeepCollectionEquality().hash(_this.rentangTidakTersedia),_this.jumlahDisewa,_this.aktif);
+  return Object.hash(runtimeType,_this.id,_this.ownerId,_this.judul,_this.deskripsi,_this.kategori,_this.hargaPerHari,const DeepCollectionEquality().hash(_this.daftarFoto),_this.lokasiKampus,const DeepCollectionEquality().hash(_this.rentangTidakTersedia),_this.jumlahDisewa,_this.aktif,_this.dendaPerHari,_this.bisaBarter,const DeepCollectionEquality().hash(_this.minatBarter));
 }
 
 @override
 String toString() {
   final _this = this as Item;
-  return 'Item(id: ${_this.id}, ownerId: ${_this.ownerId}, judul: ${_this.judul}, deskripsi: ${_this.deskripsi}, kategori: ${_this.kategori}, hargaPerHari: ${_this.hargaPerHari}, daftarFoto: ${_this.daftarFoto}, lokasiKampus: ${_this.lokasiKampus}, rentangTidakTersedia: ${_this.rentangTidakTersedia}, jumlahDisewa: ${_this.jumlahDisewa}, aktif: ${_this.aktif})';
+  return 'Item(id: ${_this.id}, ownerId: ${_this.ownerId}, judul: ${_this.judul}, deskripsi: ${_this.deskripsi}, kategori: ${_this.kategori}, hargaPerHari: ${_this.hargaPerHari}, daftarFoto: ${_this.daftarFoto}, lokasiKampus: ${_this.lokasiKampus}, rentangTidakTersedia: ${_this.rentangTidakTersedia}, jumlahDisewa: ${_this.jumlahDisewa}, aktif: ${_this.aktif}, dendaPerHari: ${_this.dendaPerHari}, bisaBarter: ${_this.bisaBarter}, minatBarter: ${_this.minatBarter})';
 }
 
 
@@ -328,7 +331,7 @@ abstract mixin class $ItemCopyWith<$Res>  {
   factory $ItemCopyWith(Item value, $Res Function(Item) _then) = _$ItemCopyWithImpl;
 @useResult
 $Res call({
- String id, String ownerId, String judul, String deskripsi, Kategori kategori, int hargaPerHari, List<String> daftarFoto, String lokasiKampus, List<RentangTanggal> rentangTidakTersedia, int jumlahDisewa, bool aktif
+ String id, String ownerId, String judul, String deskripsi, Kategori kategori, int hargaPerHari, List<String> daftarFoto, String lokasiKampus, List<RentangTanggal> rentangTidakTersedia, int jumlahDisewa, bool aktif, int dendaPerHari, bool bisaBarter, List<Kategori> minatBarter
 });
 
 
@@ -345,7 +348,7 @@ class _$ItemCopyWithImpl<$Res>
 
 /// Create a copy of Item
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? ownerId = null,Object? judul = null,Object? deskripsi = null,Object? kategori = null,Object? hargaPerHari = null,Object? daftarFoto = null,Object? lokasiKampus = null,Object? rentangTidakTersedia = null,Object? jumlahDisewa = null,Object? aktif = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? ownerId = null,Object? judul = null,Object? deskripsi = null,Object? kategori = null,Object? hargaPerHari = null,Object? daftarFoto = null,Object? lokasiKampus = null,Object? rentangTidakTersedia = null,Object? jumlahDisewa = null,Object? aktif = null,Object? dendaPerHari = null,Object? bisaBarter = null,Object? minatBarter = null,}) {
   return _then(Item(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,ownerId: null == ownerId ? _self.ownerId : ownerId // ignore: cast_nullable_to_non_nullable
@@ -358,7 +361,10 @@ as List<String>,lokasiKampus: null == lokasiKampus ? _self.lokasiKampus : lokasi
 as String,rentangTidakTersedia: null == rentangTidakTersedia ? _self.rentangTidakTersedia : rentangTidakTersedia // ignore: cast_nullable_to_non_nullable
 as List<RentangTanggal>,jumlahDisewa: null == jumlahDisewa ? _self.jumlahDisewa : jumlahDisewa // ignore: cast_nullable_to_non_nullable
 as int,aktif: null == aktif ? _self.aktif : aktif // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,dendaPerHari: null == dendaPerHari ? _self.dendaPerHari : dendaPerHari // ignore: cast_nullable_to_non_nullable
+as int,bisaBarter: null == bisaBarter ? _self.bisaBarter : bisaBarter // ignore: cast_nullable_to_non_nullable
+as bool,minatBarter: null == minatBarter ? _self.minatBarter : minatBarter // ignore: cast_nullable_to_non_nullable
+as List<Kategori>,
   ));
 }
 
@@ -443,10 +449,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String ownerId,  String judul,  String deskripsi,  Kategori kategori,  int hargaPerHari,  List<String> daftarFoto,  String lokasiKampus,  List<RentangTanggal> rentangTidakTersedia,  int jumlahDisewa,  bool aktif)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String ownerId,  String judul,  String deskripsi,  Kategori kategori,  int hargaPerHari,  List<String> daftarFoto,  String lokasiKampus,  List<RentangTanggal> rentangTidakTersedia,  int jumlahDisewa,  bool aktif,  int dendaPerHari,  bool bisaBarter,  List<Kategori> minatBarter)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Item() when $default != null:
-return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategori,_that.hargaPerHari,_that.daftarFoto,_that.lokasiKampus,_that.rentangTidakTersedia,_that.jumlahDisewa,_that.aktif);case _:
+return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategori,_that.hargaPerHari,_that.daftarFoto,_that.lokasiKampus,_that.rentangTidakTersedia,_that.jumlahDisewa,_that.aktif,_that.dendaPerHari,_that.bisaBarter,_that.minatBarter);case _:
   return orElse();
 
 }
@@ -464,10 +470,10 @@ return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategor
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String ownerId,  String judul,  String deskripsi,  Kategori kategori,  int hargaPerHari,  List<String> daftarFoto,  String lokasiKampus,  List<RentangTanggal> rentangTidakTersedia,  int jumlahDisewa,  bool aktif)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String ownerId,  String judul,  String deskripsi,  Kategori kategori,  int hargaPerHari,  List<String> daftarFoto,  String lokasiKampus,  List<RentangTanggal> rentangTidakTersedia,  int jumlahDisewa,  bool aktif,  int dendaPerHari,  bool bisaBarter,  List<Kategori> minatBarter)  $default,) {final _that = this;
 switch (_that) {
 case _Item():
-return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategori,_that.hargaPerHari,_that.daftarFoto,_that.lokasiKampus,_that.rentangTidakTersedia,_that.jumlahDisewa,_that.aktif);case _:
+return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategori,_that.hargaPerHari,_that.daftarFoto,_that.lokasiKampus,_that.rentangTidakTersedia,_that.jumlahDisewa,_that.aktif,_that.dendaPerHari,_that.bisaBarter,_that.minatBarter);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -484,10 +490,10 @@ return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategor
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String ownerId,  String judul,  String deskripsi,  Kategori kategori,  int hargaPerHari,  List<String> daftarFoto,  String lokasiKampus,  List<RentangTanggal> rentangTidakTersedia,  int jumlahDisewa,  bool aktif)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String ownerId,  String judul,  String deskripsi,  Kategori kategori,  int hargaPerHari,  List<String> daftarFoto,  String lokasiKampus,  List<RentangTanggal> rentangTidakTersedia,  int jumlahDisewa,  bool aktif,  int dendaPerHari,  bool bisaBarter,  List<Kategori> minatBarter)?  $default,) {final _that = this;
 switch (_that) {
 case _Item() when $default != null:
-return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategori,_that.hargaPerHari,_that.daftarFoto,_that.lokasiKampus,_that.rentangTidakTersedia,_that.jumlahDisewa,_that.aktif);case _:
+return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategori,_that.hargaPerHari,_that.daftarFoto,_that.lokasiKampus,_that.rentangTidakTersedia,_that.jumlahDisewa,_that.aktif,_that.dendaPerHari,_that.bisaBarter,_that.minatBarter);case _:
   return null;
 
 }
@@ -499,7 +505,7 @@ return $default(_that.id,_that.ownerId,_that.judul,_that.deskripsi,_that.kategor
 @JsonSerializable()
 
 class _Item implements Item {
-  const _Item({required this.id, required this.ownerId, required this.judul, required this.deskripsi, required this.kategori, required this.hargaPerHari,  List<String> daftarFoto = const <String>[], required this.lokasiKampus,  List<RentangTanggal> rentangTidakTersedia = const <RentangTanggal>[], this.jumlahDisewa = 0, this.aktif = true}): _daftarFoto = daftarFoto,_rentangTidakTersedia = rentangTidakTersedia;
+  const _Item({required this.id, required this.ownerId, required this.judul, required this.deskripsi, required this.kategori, required this.hargaPerHari,  List<String> daftarFoto = const <String>[], required this.lokasiKampus,  List<RentangTanggal> rentangTidakTersedia = const <RentangTanggal>[], this.jumlahDisewa = 0, this.aktif = true, this.dendaPerHari = 0, this.bisaBarter = false,  List<Kategori> minatBarter = const <Kategori>[]}): _daftarFoto = daftarFoto,_rentangTidakTersedia = rentangTidakTersedia,_minatBarter = minatBarter;
   factory _Item.fromJson(Map<String, dynamic> json) => _$ItemFromJson(json);
 
 @override final  String id;
@@ -526,6 +532,19 @@ class _Item implements Item {
 @override@JsonKey() final  int jumlahDisewa;
 /// Diatur pemilik; `false` = tidak tampil di Beranda & tidak bisa disewa.
 @override@JsonKey() final  bool aktif;
+/// Denda keterlambatan per hari (Rp); 0 = tanpa denda (M10).
+@override@JsonKey() final  int dendaPerHari;
+/// Pemilik menerima tawaran barter (tukar pinjam sementara, M11).
+@override@JsonKey() final  bool bisaBarter;
+/// Kategori barang yang dicari pemilik untuk barter.
+ final  List<Kategori> _minatBarter;
+/// Kategori barang yang dicari pemilik untuk barter.
+@override@JsonKey() List<Kategori> get minatBarter {
+  if (_minatBarter is EqualUnmodifiableListView) return _minatBarter;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_minatBarter);
+}
+
 
 /// Create a copy of Item
 /// with the given fields replaced by the non-null parameter values.
@@ -540,18 +559,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Item&&(identical(other.id, id) || other.id == id)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&(identical(other.judul, judul) || other.judul == judul)&&(identical(other.deskripsi, deskripsi) || other.deskripsi == deskripsi)&&(identical(other.kategori, kategori) || other.kategori == kategori)&&(identical(other.hargaPerHari, hargaPerHari) || other.hargaPerHari == hargaPerHari)&&const DeepCollectionEquality().equals(other.daftarFoto, _daftarFoto)&&(identical(other.lokasiKampus, lokasiKampus) || other.lokasiKampus == lokasiKampus)&&const DeepCollectionEquality().equals(other.rentangTidakTersedia, _rentangTidakTersedia)&&(identical(other.jumlahDisewa, jumlahDisewa) || other.jumlahDisewa == jumlahDisewa)&&(identical(other.aktif, aktif) || other.aktif == aktif));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Item&&(identical(other.id, id) || other.id == id)&&(identical(other.ownerId, ownerId) || other.ownerId == ownerId)&&(identical(other.judul, judul) || other.judul == judul)&&(identical(other.deskripsi, deskripsi) || other.deskripsi == deskripsi)&&(identical(other.kategori, kategori) || other.kategori == kategori)&&(identical(other.hargaPerHari, hargaPerHari) || other.hargaPerHari == hargaPerHari)&&const DeepCollectionEquality().equals(other.daftarFoto, _daftarFoto)&&(identical(other.lokasiKampus, lokasiKampus) || other.lokasiKampus == lokasiKampus)&&const DeepCollectionEquality().equals(other.rentangTidakTersedia, _rentangTidakTersedia)&&(identical(other.jumlahDisewa, jumlahDisewa) || other.jumlahDisewa == jumlahDisewa)&&(identical(other.aktif, aktif) || other.aktif == aktif)&&(identical(other.dendaPerHari, dendaPerHari) || other.dendaPerHari == dendaPerHari)&&(identical(other.bisaBarter, bisaBarter) || other.bisaBarter == bisaBarter)&&const DeepCollectionEquality().equals(other.minatBarter, _minatBarter));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,ownerId,judul,deskripsi,kategori,hargaPerHari,const DeepCollectionEquality().hash(_daftarFoto),lokasiKampus,const DeepCollectionEquality().hash(_rentangTidakTersedia),jumlahDisewa,aktif);
+    return Object.hash(runtimeType,id,ownerId,judul,deskripsi,kategori,hargaPerHari,const DeepCollectionEquality().hash(_daftarFoto),lokasiKampus,const DeepCollectionEquality().hash(_rentangTidakTersedia),jumlahDisewa,aktif,dendaPerHari,bisaBarter,const DeepCollectionEquality().hash(_minatBarter));
 }
 
 @override
 String toString() {
-    return 'Item(id: $id, ownerId: $ownerId, judul: $judul, deskripsi: $deskripsi, kategori: $kategori, hargaPerHari: $hargaPerHari, daftarFoto: $daftarFoto, lokasiKampus: $lokasiKampus, rentangTidakTersedia: $rentangTidakTersedia, jumlahDisewa: $jumlahDisewa, aktif: $aktif)';
+    return 'Item(id: $id, ownerId: $ownerId, judul: $judul, deskripsi: $deskripsi, kategori: $kategori, hargaPerHari: $hargaPerHari, daftarFoto: $daftarFoto, lokasiKampus: $lokasiKampus, rentangTidakTersedia: $rentangTidakTersedia, jumlahDisewa: $jumlahDisewa, aktif: $aktif, dendaPerHari: $dendaPerHari, bisaBarter: $bisaBarter, minatBarter: $minatBarter)';
 }
 
 
@@ -562,7 +581,7 @@ abstract mixin class _$ItemCopyWith<$Res> implements $ItemCopyWith<$Res> {
   factory _$ItemCopyWith(_Item value, $Res Function(_Item) _then) = __$ItemCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String ownerId, String judul, String deskripsi, Kategori kategori, int hargaPerHari, List<String> daftarFoto, String lokasiKampus, List<RentangTanggal> rentangTidakTersedia, int jumlahDisewa, bool aktif
+ String id, String ownerId, String judul, String deskripsi, Kategori kategori, int hargaPerHari, List<String> daftarFoto, String lokasiKampus, List<RentangTanggal> rentangTidakTersedia, int jumlahDisewa, bool aktif, int dendaPerHari, bool bisaBarter, List<Kategori> minatBarter
 });
 
 
@@ -579,7 +598,7 @@ class __$ItemCopyWithImpl<$Res>
 
 /// Create a copy of Item
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? ownerId = null,Object? judul = null,Object? deskripsi = null,Object? kategori = null,Object? hargaPerHari = null,Object? daftarFoto = null,Object? lokasiKampus = null,Object? rentangTidakTersedia = null,Object? jumlahDisewa = null,Object? aktif = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? ownerId = null,Object? judul = null,Object? deskripsi = null,Object? kategori = null,Object? hargaPerHari = null,Object? daftarFoto = null,Object? lokasiKampus = null,Object? rentangTidakTersedia = null,Object? jumlahDisewa = null,Object? aktif = null,Object? dendaPerHari = null,Object? bisaBarter = null,Object? minatBarter = null,}) {
   return _then(_Item(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,ownerId: null == ownerId ? _self.ownerId : ownerId // ignore: cast_nullable_to_non_nullable
@@ -592,7 +611,10 @@ as List<String>,lokasiKampus: null == lokasiKampus ? _self.lokasiKampus : lokasi
 as String,rentangTidakTersedia: null == rentangTidakTersedia ? _self._rentangTidakTersedia : rentangTidakTersedia // ignore: cast_nullable_to_non_nullable
 as List<RentangTanggal>,jumlahDisewa: null == jumlahDisewa ? _self.jumlahDisewa : jumlahDisewa // ignore: cast_nullable_to_non_nullable
 as int,aktif: null == aktif ? _self.aktif : aktif // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,dendaPerHari: null == dendaPerHari ? _self.dendaPerHari : dendaPerHari // ignore: cast_nullable_to_non_nullable
+as int,bisaBarter: null == bisaBarter ? _self.bisaBarter : bisaBarter // ignore: cast_nullable_to_non_nullable
+as bool,minatBarter: null == minatBarter ? _self._minatBarter : minatBarter // ignore: cast_nullable_to_non_nullable
+as List<Kategori>,
   ));
 }
 

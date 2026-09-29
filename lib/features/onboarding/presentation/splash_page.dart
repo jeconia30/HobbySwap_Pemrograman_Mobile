@@ -7,7 +7,6 @@ import '../../../core/router/app_redirect.dart';
 import '../../../core/storage/session_storage.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_page_dots.dart';
 import '../../../core/widgets/hs_logo_mark.dart';
 import '../../auth/domain/user.dart';
@@ -48,6 +47,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     ));
   }
 
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -55,95 +55,86 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     const large = AppSizes.splashDecorLarge;
     const small = AppSizes.splashDecorSmall;
 
+    // Logo tampil penuh sejak frame pertama di tengah layar, persis seperti
+    // splash native; hanya elemen pendukung yang muncul perlahan.
+    Widget fadeIn(Widget child) => TweenAnimationBuilder<double>(
+          tween: Tween(begin: reduceMotion ? 1 : 0, end: 1),
+          duration: reduceMotion ? Duration.zero : AppDurations.page,
+          curve: Curves.easeOutCubic,
+          builder: (context, t, child) => Opacity(opacity: t, child: child),
+          child: child,
+        );
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppPalette.transparent,
         systemNavigationBarColor: AppPalette.splashBg,
       ),
       child: Scaffold(
         backgroundColor: AppPalette.splashBg,
-        body: Stack(
-          children: [
-            Positioned(
-              left: -large * 0.42,
-              top: -large * 0.34,
-              child: _DecorCircle(
-                diameter: large,
-                color: AppPalette.splashDecorDeep.withValues(alpha: 0.55),
+        body: LayoutBuilder(
+          builder: (context, box) => Stack(
+            children: [
+              Positioned(
+                left: -large * 0.42,
+                top: -large * 0.34,
+                child: fadeIn(_DecorCircle(
+                  diameter: large,
+                  color: AppPalette.splashDecorDeep.withValues(alpha: 0.55),
+                )),
               ),
-            ),
-            Positioned(
-              right: -small * 0.42,
-              bottom: -small * 0.3,
-              child: _DecorCircle(
-                diameter: small,
-                color: AppPalette.splashDecorMid.withValues(alpha: 0.18),
+              Positioned(
+                right: -small * 0.42,
+                bottom: -small * 0.3,
+                child: fadeIn(_DecorCircle(
+                  diameter: small,
+                  color: AppPalette.splashDecorMid.withValues(alpha: 0.18),
+                )),
               ),
-            ),
-            SafeArea(
-              bottom: false,
-              child: SizedBox.expand(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: reduceMotion ? 1 : 0, end: 1),
-                  duration: reduceMotion ? Duration.zero : AppDurations.page,
-                  curve: Curves.easeOutCubic,
-                  builder: (context, t, child) =>
-                      Opacity(opacity: t, child: child),
-                  child: Column(
+              const Center(child: HsLogoMark.splash()),
+              Positioned(
+                left: AppSpacing.pageHorizontal,
+                right: AppSpacing.pageHorizontal,
+                top: box.maxHeight / 2 + AppSizes.splashLogo / 2 + AppSpacing.lg,
+                child: fadeIn(Column(
+                  mainAxisSize: MainAxisSize.min,
+                  // Nama "HobbySwap" sudah ada di logo; di bawahnya cukup tagline.
+                  children: [
+                    Text(
+                      'Sewa alat hobi antar mahasiswa',
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyMedium
+                          ?.copyWith(color: AppPalette.splashSubtitle),
+                    ),
+                  ],
+                )),
+              ),
+              Positioned(
+                left: AppSpacing.pageHorizontal,
+                right: AppSpacing.pageHorizontal,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  child: fadeIn(Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.pageHorizontal),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const HsLogoMark.splash(),
-                                const SizedBox(height: AppSpacing.xl),
-                                Text.rich(
-                                  TextSpan(children: [
-                                    TextSpan(
-                                      text: 'Hobby',
-                                      style: TextStyle(
-                                          color: AppPalette.splashTitle),
-                                    ),
-                                    TextSpan(
-                                      text: 'Swap',
-                                      style:
-                                          TextStyle(color: AppPalette.brandLeaf),
-                                    ),
-                                  ]),
-                                  textAlign: TextAlign.center,
-                                  style: text.headlineLarge
-                                      ?.merge(AppTextStyles.wordmark),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text(
-                                  'Sewa alat hobi antar mahasiswa',
-                                  textAlign: TextAlign.center,
-                                  style: text.bodyMedium?.copyWith(
-                                      color: AppPalette.splashSubtitle),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                       const AppPageDots.splash(count: 3, index: 0),
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         'Khusus mahasiswa terverifikasi',
+                        textAlign: TextAlign.center,
                         style: text.bodySmall
                             ?.copyWith(color: AppPalette.splashSubtitle),
                       ),
                       const SizedBox(height: AppSpacing.splashBottom),
                     ],
-                  ),
+                  )),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

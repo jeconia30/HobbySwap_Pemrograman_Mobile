@@ -19,6 +19,22 @@ _Booking _$BookingFromJson(Map<String, dynamic> json) => _Booking(
   pesan: json['pesan'] as String?,
   dibuatPada: DateTime.parse(json['dibuatPada'] as String),
   alasanTolak: json['alasanTolak'] as String?,
+  statusBayar:
+      $enumDecodeNullable(_$StatusBayarEnumMap, json['statusBayar']) ??
+      StatusBayar.belum,
+  metodeBayar: $enumDecodeNullable(_$MetodeBayarEnumMap, json['metodeBayar']),
+  dibayarPada: json['dibayarPada'] == null
+      ? null
+      : DateTime.parse(json['dibayarPada'] as String),
+  dendaTerlambat: (json['dendaTerlambat'] as num?)?.toInt() ?? 0,
+  dibatalkanOleh: json['dibatalkanOleh'] as String?,
+  alasanBatal: json['alasanBatal'] as String?,
+  jenis:
+      $enumDecodeNullable(_$JenisTransaksiEnumMap, json['jenis']) ??
+      JenisTransaksi.sewa,
+  itemTawaranId: json['itemTawaranId'] as String?,
+  perluTanggapanPengaju: json['perluTanggapanPengaju'] as bool? ?? false,
+  dendaTawaran: (json['dendaTawaran'] as num?)?.toInt() ?? 0,
 );
 
 Map<String, dynamic> _$BookingToJson(_Booking instance) => <String, dynamic>{
@@ -32,6 +48,16 @@ Map<String, dynamic> _$BookingToJson(_Booking instance) => <String, dynamic>{
   'pesan': instance.pesan,
   'dibuatPada': instance.dibuatPada.toIso8601String(),
   'alasanTolak': instance.alasanTolak,
+  'statusBayar': _$StatusBayarEnumMap[instance.statusBayar]!,
+  'metodeBayar': _$MetodeBayarEnumMap[instance.metodeBayar],
+  'dibayarPada': instance.dibayarPada?.toIso8601String(),
+  'dendaTerlambat': instance.dendaTerlambat,
+  'dibatalkanOleh': instance.dibatalkanOleh,
+  'alasanBatal': instance.alasanBatal,
+  'jenis': _$JenisTransaksiEnumMap[instance.jenis]!,
+  'itemTawaranId': instance.itemTawaranId,
+  'perluTanggapanPengaju': instance.perluTanggapanPengaju,
+  'dendaTawaran': instance.dendaTawaran,
 };
 
 const _$StatusBookingEnumMap = {
@@ -41,4 +67,19 @@ const _$StatusBookingEnumMap = {
   StatusBooking.berlangsung: 'berlangsung',
   StatusBooking.selesai: 'selesai',
   StatusBooking.dibatalkan: 'dibatalkan',
+};
+
+const _$StatusBayarEnumMap = {
+  StatusBayar.belum: 'belum',
+  StatusBayar.lunas: 'lunas',
+};
+
+const _$MetodeBayarEnumMap = {
+  MetodeBayar.tunai: 'tunai',
+  MetodeBayar.transfer: 'transfer',
+};
+
+const _$JenisTransaksiEnumMap = {
+  JenisTransaksi.sewa: 'sewa',
+  JenisTransaksi.barter: 'barter',
 };

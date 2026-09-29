@@ -8,12 +8,18 @@ import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_chip.dart';
 import '../../item/domain/item_filter.dart';
 
-typedef HomeFilterResult = ({ItemSort sort, int? hargaMaks, bool hanyaTersedia});
+typedef HomeFilterResult = ({
+  ItemSort sort,
+  int? hargaMaks,
+  bool hanyaTersedia,
+  bool hanyaBarter,
+});
 
 const _defaults = (
   sort: ItemSort.terpopuler,
   hargaMaks: null,
   hanyaTersedia: false,
+  hanyaBarter: false,
 );
 
 Future<HomeFilterResult?> showHomeFilterSheet(
@@ -39,6 +45,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late double _harga =
       (widget.initial.hargaMaks ?? HargaFilter.max).toDouble();
   late bool _hanyaTersedia = widget.initial.hanyaTersedia;
+  late bool _hanyaBarter = widget.initial.hanyaBarter;
 
   bool get _noLimit => _harga >= HargaFilter.max;
 
@@ -115,6 +122,32 @@ class _FilterSheetState extends State<_FilterSheet> {
             ),
           ),
         ),
+        MergeSemantics(
+          child: InkWell(
+            key: const Key('filter-barter'),
+            borderRadius: AppRadius.inputAll,
+            onTap: () => setState(() => _hanyaBarter = !_hanyaBarter),
+            child: ConstrainedBox(
+              constraints:
+                  const BoxConstraints(minHeight: AppSizes.minTapTarget),
+              child: Row(
+                children: [
+                  Icon(Icons.swap_horiz_rounded,
+                      size: AppSizes.iconSm,
+                      color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text('Bisa barter', style: text.titleMedium),
+                  ),
+                  Switch(
+                    value: _hanyaBarter,
+                    onChanged: (v) => setState(() => _hanyaBarter = v),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         const SizedBox(height: AppSpacing.xl),
         AppButton(
           key: const Key('filter-apply'),
@@ -123,6 +156,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             sort: _sort,
             hargaMaks: _noLimit ? null : _harga.round(),
             hanyaTersedia: _hanyaTersedia,
+            hanyaBarter: _hanyaBarter,
           )),
         ),
         const SizedBox(height: AppSpacing.sm),

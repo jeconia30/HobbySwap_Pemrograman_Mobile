@@ -283,7 +283,7 @@ class _DayCell extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs / 2),
         child: Material(
-          color: bg ?? Colors.transparent,
+          color: bg ?? AppPalette.transparent,
           borderRadius:
               const BorderRadius.all(Radius.circular(AppRadius.calendarCell)),
           clipBehavior: Clip.antiAlias,

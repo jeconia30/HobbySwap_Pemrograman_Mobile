@@ -40,20 +40,21 @@ Palet diambil dari logo: hijau tua, hijau sedang, dan krem.
 | `surface-alt` | `#254034` | `#E9E4D6` | Input nonaktif, chip, tombol sekunder |
 | `border` | `#2E4739` | `#DED8C7` | Garis tepi kartu, input, pembatas |
 | `text-primary` | `#EEF2E9` | `#1A2C24` | Teks utama |
-| `text-secondary` | `#9DB0A4` | `#5F6D62` | Teks pendukung |
+| `text-secondary` | `#9DB0A4` | `#546056` | Teks pendukung |
 | `accent` | `#6B9E63` | `#1E4638` | Hijau — identitas HobbySwap, latar tombol utama, tab aktif |
 | `on-accent` | `#0F221A` | `#F4F1E8` | Teks/ikon di atas `accent` |
 | `accent-text` | `#8FBE86` | `#1E4638` | Link, harga, teks hijau di atas `bg`/`surface` |
 | `accent-soft` | `#22392E` | `#DDE7D5` | Latar lembut untuk chip aktif, ikon, highlight hijau |
-| `verified` | `#7FBF6E` | `#4E8C43` | Badge terverifikasi, status sukses transaksi |
-| `success` | `#7FBF6E` | `#4E8C43` | Berhasil |
-| `warning` | `#E5B860` | `#B4832A` | Peringatan |
-| `error` | `#E8836F` | `#C24A32` | Gagal (warna tanah, selaras palet hangat) |
+| `verified` | `#7FBF6E` | `#396631` | Badge terverifikasi, status sukses transaksi |
+| `success` | `#7FBF6E` | `#396631` | Berhasil |
+| `warning` | `#E5B860` | `#77561C` | Peringatan |
+| `error` | `#EB917F` | `#9D3C29` | Gagal (warna tanah, selaras palet hangat) |
 
 Catatan aksen:
 - Di **light mode**, `accent` memakai hijau tua logo (`#1E4638`) agar kontras di atas krem terjaga.
 - Di **dark mode**, `accent` memakai hijau sedang logo (`#6B9E63`) agar cukup terang di atas latar gelap.
 - Hijau sedang (`#6B9E63`) boleh dipakai sebagai warna sekunder/ilustratif; hijau tua adalah warna aksi utama.
+- Nilai `text-secondary`, `verified`, `warning`, dan `error` di light mode (serta `error` dark) digelapkan/diterangkan di M8 supaya kontras teks ≥ 4.5:1, termasuk di atas latar badge (tint 16%). Diuji di `test/core/contrast_test.dart`.
 
 Aturan warna:
 - Hijau (`accent`) adalah identitas dan warna aksi utama; **satu** aksi primer per layar.

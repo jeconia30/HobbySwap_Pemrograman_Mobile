@@ -14,6 +14,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_bottom_sheet.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_empty_state.dart';
+import '../../../core/widgets/app_press_scale.dart';
 import '../../../core/widgets/app_error_banner.dart';
 import '../../../core/widgets/item_card.dart';
 import '../../../core/widgets/item_thumb.dart';
@@ -26,6 +27,8 @@ import '../data/item_providers.dart';
 import '../domain/item.dart';
 import '../domain/item_repository.dart';
 import 'item_status_chip.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../booking/presentation/batal_sewa_sheet.dart';
 
 class BarangSayaPage extends ConsumerWidget {
   const BarangSayaPage({super.key});
@@ -76,8 +79,8 @@ class BarangSayaPage extends ConsumerWidget {
           padding: const EdgeInsets.only(top: AppSpacing.xl),
           child: AppEmptyState(
             icon: Icons.wifi_off_rounded,
-            title: 'Koneksi lagi putus. Coba lagi ya.',
-            actionLabel: 'Coba lagi',
+            title: AppTeks.koneksiPutus,
+            actionLabel: AppTeks.cobaLagi,
             onAction: () => ref
               ..invalidate(myItemsProvider)
               ..invalidate(ownerBookingsProvider),
@@ -88,7 +91,7 @@ class BarangSayaPage extends ConsumerWidget {
       content = [
         box(Skeletonizer(
           child: Column(children: [
-            _StatsCard(stats: (pendapatanBulanIni: 420000, jumlahDisewakan: 12), rating: 4.8),
+            const _StatsCard(stats: (pendapatanBulanIni: 420000, jumlahDisewakan: 12), rating: 4.8),
             const SizedBox(height: AppSpacing.xl),
             for (var i = 0; i < 3; i++) ...[
               _ItemRow(listing: ItemCard.placeholder, onTap: () {}),
@@ -217,12 +220,31 @@ class BarangSayaPage extends ConsumerWidget {
       // sedang ditutup membuat halaman tujuan tidak memuat data).
       case _Go(:final location):
         context.push(location);
+      case _Batal(:final detail):
+        final ok = await showBatalSewaSheet(
+          context,
+          detail: detail,
+          hariIni: ProviderScope.containerOf(context).read(clockProvider)(),
+          sebagaiPemilik: true,
+        );
+        if (ok) {
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(content: Text('Sewa dibatalkan.')));
+        }
       case final String message:
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
     }
   }
+}
+
+/// Hasil sheet: buka sheet pembatalan untuk [detail] setelah sheet tertutup.
+class _Batal {
+  const _Batal(this.detail);
+
+  final BookingDetail detail;
 }
 
 /// Hasil sheet: buka [location] setelah sheet tertutup.
@@ -285,7 +307,7 @@ class _StatsCard extends StatelessWidget {
           child: Row(
             children: [
               cell(
-                Text(formatRupiahRingkas(stats.pendapatanBulanIni),
+                Text(formatRupiah(stats.pendapatanBulanIni),
                     style: value),
                 'Pendapatan',
               ),
@@ -324,7 +346,7 @@ class _PendingCard extends StatelessWidget {
     final colors = AppColors.of(context);
     final names = <String>{for (final d in pending) d.penyewa.nama}.toList();
 
-    return Material(
+    final row = Material(
       color: colors.warning.withValues(alpha: 0.18),
       borderRadius: AppRadius.cardAll,
       clipBehavior: Clip.antiAlias,
@@ -372,6 +394,7 @@ class _PendingCard extends StatelessWidget {
         ),
       ),
     );
+    return AppPressScale(child: row);
   }
 }
 
@@ -395,7 +418,7 @@ class _ItemRow extends StatelessWidget {
         'kembali ${formatTanggalPendek(listing.disewaSampai!)}',
     ].join(' · ');
 
-    return Material(
+    final row = Material(
       color: scheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: const BorderRadius.all(Radius.circular(AppRadius.listRow)),
@@ -437,12 +460,17 @@ class _ItemRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              ItemStatusChip(listing.status),
+              // Flexible: label panjang (Dibarter · kembali …) terbungkus, bukan overflow.
+              Flexible(
+                child: ItemStatusChip(listing.status,
+                    sampai: listing.disewaSampai),
+              ),
             ],
           ),
         ),
       ),
     );
+    return AppPressScale(child: row);
   }
 }
 
@@ -519,7 +547,7 @@ class _ItemActionsSheetState extends ConsumerState<_ItemActionsSheet> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = 'Koneksi lagi putus. Coba lagi ya.';
+          _error = AppTeks.koneksiPutus;
         });
       }
     }
@@ -560,7 +588,7 @@ class _ItemActionsSheetState extends ConsumerState<_ItemActionsSheet> {
                       _confirmDelete = false;
                       _error = null;
                     }),
-            child: const Text('Batal'),
+            child: const Text(AppTeks.batal),
           ),
         ],
       );
@@ -613,6 +641,18 @@ class _ItemActionsSheetState extends ConsumerState<_ItemActionsSheet> {
             label: 'Beri rating penyewa',
             onTap: () => Navigator.pop(
                 context, _Go(AppRoutes.rating(selesai.booking.id))),
+          ),
+        if (_sewaAktif case final s?
+            when s.booking.status == StatusBooking.disetujui)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              key: Key('batalkan-sewa-${s.booking.id}'),
+              onPressed: () => Navigator.pop(context, _Batal(s)),
+              style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error),
+              child: Text('Batalkan sewa ${firstName(s.penyewa.nama)}'),
+            ),
           ),
         AppSheetAction(
           icon: Icons.delete_outline_rounded,

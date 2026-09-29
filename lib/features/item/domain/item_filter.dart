@@ -34,13 +34,17 @@ abstract class ItemFilter with _$ItemFilter {
     /// `null` = tanpa batas harga.
     int? hargaMaks,
     @Default(false) bool hanyaTersedia,
+
+    /// Hanya barang yang menerima barter (M11).
+    @Default(false) bool hanyaBarter,
   }) = _ItemFilter;
 
   /// Jumlah filter dari bottom sheet (untuk angka di tombol filter).
   int get sheetFilterCount =>
       (sort != ItemSort.terpopuler ? 1 : 0) +
       (hargaMaks != null ? 1 : 0) +
-      (hanyaTersedia ? 1 : 0);
+      (hanyaTersedia ? 1 : 0) +
+      (hanyaBarter ? 1 : 0);
 
   bool get isActive =>
       query.trim().isNotEmpty || kategori != null || sheetFilterCount > 0;
@@ -66,6 +70,7 @@ List<ItemListing> applyItemFilter(
       return false;
     }
     if (filter.hanyaTersedia && l.status != ItemStatus.tersedia) return false;
+    if (filter.hanyaBarter && !item.bisaBarter) return false;
     if (q.isEmpty) return true;
     return item.judul.toLowerCase().contains(q) ||
         item.kategori.label.toLowerCase().contains(q) ||

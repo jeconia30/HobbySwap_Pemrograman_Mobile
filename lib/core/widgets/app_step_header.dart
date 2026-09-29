@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_spacing.dart';
 import 'app_back_button.dart';
 import 'app_step_progress.dart';
+import '../constants/app_strings.dart';
 
 /// Kepala alur bertahap: tombol kembali, "Langkah x dari y", dan progress.
 class AppStepHeader extends StatelessWidget {
@@ -11,7 +12,7 @@ class AppStepHeader extends StatelessWidget {
     required this.current,
     required this.total,
     this.onBack,
-    this.backTooltip = 'Kembali',
+    this.backTooltip = AppTeks.kembali,
   });
 
   final int current;

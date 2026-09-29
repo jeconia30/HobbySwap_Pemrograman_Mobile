@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -8,25 +7,35 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/clock.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_back_button.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_chip.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_banner.dart';
+import '../../../core/widgets/app_info_note.dart';
 import '../../../core/widgets/app_segmented_control.dart';
 import '../../../core/widgets/app_sticky_bottom.dart';
 import '../../../core/widgets/app_text_field.dart';
+import '../../../core/widgets/status_badge.dart';
 import '../../../core/widgets/dashed_border.dart';
 import '../../auth/domain/user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../booking/data/booking_providers.dart';
 import '../../booking/domain/booking.dart';
+import '../../booking/domain/booking_repository.dart';
+import '../../booking/domain/booking_rules.dart';
 import '../../booking/presentation/sewa_refresh.dart';
 import '../data/checklist_providers.dart';
 import '../domain/handover_checklist.dart';
+import '../../../core/constants/app_strings.dart';
+import '../../chat/presentation/chat_open.dart';
+import '../../../core/widgets/app_icon_tile_button.dart';
 
 class ChecklistPage extends ConsumerStatefulWidget {
   const ChecklistPage({
@@ -44,23 +53,31 @@ class ChecklistPage extends ConsumerStatefulWidget {
 
 class _ChecklistPageState extends ConsumerState<ChecklistPage> {
   late TahapChecklist _tahap = widget.initialTahap;
-  /// Per tahap, supaya isi tidak hilang saat berpindah segmen.
-  final _catatanPer = {
-    for (final t in TahapChecklist.values) t: TextEditingController(),
-  };
-  final _drafts = <TahapChecklist, List<KondisiItem>>{};
 
-  TextEditingController get _catatan => _catatanPer[_tahap]!;
+  /// Barang yang dicek: `null` = barang utama; untuk barter bisa id barang
+  /// tawaran (tab "Yang kamu pinjam" / "Yang kamu pinjamkan").
+  String? _barang;
+
+  /// Per tahap & barang, supaya isi tidak hilang saat berpindah segmen.
+  final _catatanPer = <(TahapChecklist, String?), TextEditingController>{};
+  final _drafts = <(TahapChecklist, String?), List<KondisiItem>>{};
+
+  TextEditingController get _catatan =>
+      _catatanPer.putIfAbsent((_tahap, _barang), TextEditingController.new);
 
   /// Salinan yang sedang diedit (centang & foto); persetujuan dari stream.
-  List<KondisiItem>? get _draft => _drafts[_tahap];
-  set _draft(List<KondisiItem>? v) => v == null ? _drafts.remove(_tahap) : _drafts[_tahap] = v;
+  List<KondisiItem>? get _draft => _drafts[(_tahap, _barang)];
+  set _draft(List<KondisiItem>? v) => v == null
+      ? _drafts.remove((_tahap, _barang))
+      : _drafts[(_tahap, _barang)] = v;
   bool _busy = false;
   bool _approvedHere = false;
+  bool _bayarBusy = false;
   List<String> _masalah = const [];
   String? _error;
 
-  (String, TahapChecklist) get _key => (widget.bookingId, _tahap);
+  (String, TahapChecklist, String?) get _key =>
+      (widget.bookingId, _tahap, _barang);
 
   @override
   void dispose() {
@@ -73,18 +90,28 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
   void _back() =>
       context.canPop() ? context.pop() : context.go(AppRoutes.sewaan);
 
+  void _gantiBarang(String? barang) => setState(() {
+    _barang = barang;
+    _masalah = const [];
+    _error = null;
+  });
+
   void _gantiTahap(TahapChecklist t) => setState(() {
-        _tahap = t;
-        _masalah = const [];
-        _error = null;
-      });
+    _tahap = t;
+    _masalah = const [];
+    _error = null;
+  });
 
   HandoverChecklist _merged(HandoverChecklist remote) => remote.copyWith(
-        daftarKondisi: _draft ?? remote.daftarKondisi,
-        catatan: _catatan.text.trim().isEmpty ? null : _catatan.text.trim(),
-      );
+    daftarKondisi: _draft ?? remote.daftarKondisi,
+    catatan: _catatan.text.trim().isEmpty ? null : _catatan.text.trim(),
+  );
 
-  void _edit(HandoverChecklist remote, int i, KondisiItem Function(KondisiItem) f) {
+  void _edit(
+    HandoverChecklist remote,
+    int i,
+    KondisiItem Function(KondisiItem) f,
+  ) {
     final items = [...(_draft ?? remote.daftarKondisi)];
     items[i] = f(items[i]);
     setState(() {
@@ -108,8 +135,13 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
       final repo = ref.read(checklistRepositoryProvider);
       await repo.save(merged);
       _approvedHere = true;
-      final result = await repo.approve(widget.bookingId, _tahap, userId);
-      HapticFeedback.lightImpact();
+      final result = await repo.approve(
+        widget.bookingId,
+        _tahap,
+        userId,
+        itemId: _barang,
+      );
+      hapticAksiPenting();
       if (!mounted) return;
       setState(() => _busy = false);
       if (result.selesai) _selesai();
@@ -124,24 +156,80 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = 'Koneksi lagi putus. Coba lagi ya.';
+          _error = AppTeks.koneksiPutus;
         });
       }
     }
   }
 
+  Future<void> _ubahBooking(Future<Booking> Function() f) async {
+    setState(() {
+      _bayarBusy = true;
+      _error = null;
+    });
+    try {
+      await f();
+      ref.invalidate(bookingByIdProvider(widget.bookingId));
+      ref.refreshSewa();
+    } on BookingException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _bayarBusy = false);
+    }
+  }
+
+  Future<void> _catatBayar(Booking b, MetodeBayar metode, bool diterima) =>
+      _ubahBooking(
+        () => ref
+            .read(bookingRepositoryProvider)
+            .catatPembayaran(b.id, metode: metode, diterima: diterima),
+      );
+
+  Future<void> _catatDenda(Booking b, bool diterima, {String? itemId}) =>
+      _ubahBooking(
+        () => ref
+            .read(bookingRepositoryProvider)
+            .catatDenda(b.id, diterima: diterima, itemId: itemId),
+      );
+
   void _selesai() {
     if (!_approvedHere) return;
     _approvedHere = false;
     ref.refreshSewa();
+    // Barter: checklist satu barang beres, barang satunya belum.
+    final b = ref.read(bookingByIdProvider(widget.bookingId)).value?.booking;
+    if (b != null && b.barter) {
+      final lain = _barang == null ? b.itemTawaranId : null;
+      final lainBeres =
+          ref
+              .read(checklistProvider((widget.bookingId, _tahap, lain)))
+              .value
+              ?.selesai ??
+          false;
+      if (!lainBeres) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Satu barang beres. Lanjutkan checklist barang '
+                'satunya, ya.',
+              ),
+            ),
+          );
+        _gantiBarang(lain);
+        return;
+      }
+    }
     if (_tahap == TahapChecklist.akhir) {
       context.pushReplacement(AppRoutes.rating(widget.bookingId));
       return;
     }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-          content: Text('Serah terima beres. Selamat memakai!')));
+      ..showSnackBar(
+        const SnackBar(content: Text('Serah terima beres. Selamat memakai!')),
+      );
     _back();
   }
 
@@ -157,7 +245,8 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
     final detail = ref.watch(bookingByIdProvider(widget.bookingId));
     final checklist = ref.watch(checklistProvider(_key));
     final awal = ref.watch(
-        checklistProvider((widget.bookingId, TahapChecklist.awal)));
+      checklistProvider((widget.bookingId, TahapChecklist.awal, _barang)),
+    );
     final user = ref.watch(authControllerProvider);
 
     if (detail.hasError || checklist.hasError) {
@@ -165,7 +254,7 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
         icon: Icons.wifi_off_rounded,
         title: checklist.error is ChecklistException
             ? (checklist.error! as ChecklistException).message
-            : 'Koneksi lagi putus. Coba lagi ya.',
+            : AppTeks.koneksiPutus,
         onRetry: () => ref
           ..invalidate(bookingByIdProvider(widget.bookingId))
           ..invalidate(checklistProvider(_key)),
@@ -173,7 +262,9 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
     }
     if (detail.hasValue && detail.value == null) {
       return _message(
-          icon: Icons.receipt_long_outlined, title: 'Sewa ini tidak ditemukan.');
+        icon: Icons.receipt_long_outlined,
+        title: AppTeks.sewaTidakDitemukan,
+      );
     }
     final d = detail.value;
     final remote = checklist.value;
@@ -198,7 +289,12 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
       _draft = remote.daftarKondisi;
       _catatan.text = remote.catatan ?? '';
     }
-    return _content(d, remote, user, awalSelesai: awal.value?.selesai ?? false);
+    // Barter: tahap akhir terbuka setelah checklist awal kedua barang beres.
+    final awalSelesai = d.booking.barter
+        ? d.booking.status == StatusBooking.berlangsung ||
+              d.booking.status == StatusBooking.selesai
+        : awal.value?.selesai ?? false;
+    return _content(d, remote, user, awalSelesai: awalSelesai);
   }
 
   Widget _message({
@@ -219,7 +315,7 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
             AppEmptyState(
               icon: icon,
               title: title,
-              actionLabel: onRetry == null ? null : 'Coba lagi',
+              actionLabel: onRetry == null ? null : AppTeks.cobaLagi,
               onAction: onRetry,
             ),
           ],
@@ -238,26 +334,53 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
     final text = theme.textTheme;
     final scheme = theme.colorScheme;
     final colors = AppColors.of(context);
-    final isOwner = d.pemilik.id == user.id;
-    final lawan = isOwner ? d.penyewa : d.pemilik;
-    final akuSetuju =
-        isOwner ? remote.disetujuiPemilik : remote.disetujuiPenyewa;
-    final lawanSetuju =
-        isOwner ? remote.disetujuiPenyewa : remote.disetujuiPemilik;
-    final lawanPada =
-        isOwner ? remote.disetujuiPenyewaPada : remote.disetujuiPemilikPada;
+    final barter = d.booking.barter;
+    final tawaran = _barang != null;
+    final barang = tawaran ? d.itemTawaran! : d.item;
+    // Pemilik barang yang sedang dicek (barang tawaran = milik pengaju).
+    final pemilikBarang = tawaran ? d.penyewa : d.pemilik;
+    final isOwner = pemilikBarang.id == user.id;
+    final lawan = d.lawanDari(user.id);
+    final dendaTercatat = tawaran
+        ? d.booking.dendaTawaran
+        : d.booking.dendaTerlambat;
+    final akuSetuju = isOwner
+        ? remote.disetujuiPemilik
+        : remote.disetujuiPenyewa;
+    final lawanSetuju = isOwner
+        ? remote.disetujuiPenyewa
+        : remote.disetujuiPemilik;
+    final lawanPada = isOwner
+        ? remote.disetujuiPenyewaPada
+        : remote.disetujuiPemilikPada;
     final items = _draft!;
     final dicek = items.where((k) => k.dicek).length;
     final editable = !akuSetuju && !remote.selesai && !_busy;
     final akhir = _tahap == TahapChecklist.akhir;
     final lawanNama = firstName(lawan.nama);
+    final today = dateOnly(ref.watch(clockProvider)());
+    final denda = hitungDenda(
+      tanggalKembali: d.booking.tanggalKembali,
+      hariKembali: today,
+      dendaPerHari: barang.dendaPerHari,
+    );
+    // Syarat pemilik sebelum boleh menyetujui (pembayaran / denda).
+    final String? syaratPemilik = !isOwner
+        ? null
+        : !akhir && !barter && d.booking.statusBayar != StatusBayar.lunas
+        ? 'Aktifkan "Pembayaran sudah diterima" dulu, ya.'
+        : akhir && denda.total > 0 && dendaTercatat < denda.total
+        ? 'Konfirmasi denda keterlambatan dulu, ya.'
+        : null;
 
     final status = switch ((remote.selesai, akuSetuju, lawanSetuju)) {
-      (true, _, _) => 'Kalian berdua sudah menyetujui. '
-          '${akhir ? 'Pengembalian' : 'Serah terima'} beres.',
-      (_, false, true) => '$lawanNama sudah menyetujui'
-          '${lawanPada == null ? '' : ' pukul ${formatJam(lawanPada)}'}. '
-          'Tinggal konfirmasi darimu.',
+      (true, _, _) =>
+        'Kalian berdua sudah menyetujui. '
+            '${akhir ? 'Pengembalian' : 'Serah terima'} beres.',
+      (_, false, true) =>
+        '$lawanNama sudah menyetujui'
+            '${lawanPada == null ? '' : ' pukul ${formatJam(lawanPada)}'}. '
+            'Tinggal konfirmasi darimu.',
       (_, true, false) => 'Menunggu $lawanNama menyetujui…',
       _ => 'Cek barang bersama $lawanNama, lalu setujui.',
     };
@@ -270,41 +393,95 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
               child: SingleChildScrollView(
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(AppSpacing.pageHome,
-                    AppSpacing.md, AppSpacing.pageHome, AppSpacing.xl),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.pageHome,
+                  AppSpacing.md,
+                  AppSpacing.pageHome,
+                  AppSpacing.xl,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: AppBackButton(onPressed: _back),
+                    Row(
+                      children: [
+                        AppBackButton(onPressed: _back),
+                        const Spacer(),
+                        AppIconTileButton(
+                          key: const Key('chat-checklist'),
+                          icon: Icons.chat_bubble_outline_rounded,
+                          tooltip: 'Chat ${lawan.nama}',
+                          onPressed: () => bukaObrolan(
+                            context,
+                            otherUserId: lawan.id,
+                            itemId: d.item.id,
+                            bookingId: d.booking.id,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Semantics(
                       header: true,
-                      child: Text('Checklist serah terima',
-                          style: text.headlineMedium
-                              ?.merge(AppTextStyles.checklistTitle)),
+                      child: Text(
+                        'Checklist serah terima',
+                        style: text.headlineMedium?.merge(
+                          AppTextStyles.checklistTitle,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text.rich(
-                      TextSpan(children: [
-                        TextSpan(
-                          text: '${d.item.judul} · '
-                              '${isOwner ? 'disewa' : 'dari'} '
-                              '${namaPendek(lawan.nama)} · ',
-                        ),
-                        TextSpan(
-                          text: '$dicek dari ${items.length} dicek',
-                          style: TextStyle(
-                            color: colors.accentText,
-                            fontWeight: FontWeight.w800,
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text:
+                                '${barang.judul} · '
+                                '${isOwner ? (barter ? 'dipinjam' : 'disewa') : 'dari'} '
+                                '${namaPendek(lawan.nama)} · ',
                           ),
-                        ),
-                      ]),
-                      style: text.bodyMedium
-                          ?.copyWith(color: scheme.onSurfaceVariant),
+                          TextSpan(
+                            text: '$dicek dari ${items.length} dicek',
+                            style: TextStyle(
+                              color: colors.accentText,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      style: text.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
+                    if (barter) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      // Tab per barang: yang kupinjam dulu.
+                      Builder(
+                        builder: (context) {
+                          final sayaPengaju = user.id == d.penyewa.id;
+                          final pinjam = sayaPengaju
+                              ? null
+                              : d.booking.itemTawaranId;
+                          final pinjamkan = sayaPengaju
+                              ? d.booking.itemTawaranId
+                              : null;
+                          return AppSegmentedControl(
+                            selected: _barang == pinjam ? 0 : 1,
+                            onChanged: (i) =>
+                                _gantiBarang(i == 0 ? pinjam : pinjamkan),
+                            segments: const [
+                              AppSegment(
+                                'Yang kamu pinjam',
+                                key: Key('tab-pinjam'),
+                              ),
+                              AppSegment(
+                                'Yang kamu pinjamkan',
+                                key: Key('tab-pinjamkan'),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.lg),
                     AppSegmentedControl(
                       selected: _tahap.index,
@@ -324,7 +501,9 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
                     const SizedBox(height: AppSpacing.lg),
                     AppCard(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.xs,
+                      ),
                       child: Column(
                         children: [
                           for (var i = 0; i < items.length; i++) ...[
@@ -333,15 +512,18 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
                               item: items[i],
                               index: i,
                               enabled: editable,
-                              onToggle: () => _edit(remote, i,
-                                  (k) => k.copyWith(dicek: !k.dicek)),
+                              onToggle: () => _edit(
+                                remote,
+                                i,
+                                (k) => k.copyWith(dicek: !k.dicek),
+                              ),
                               onFoto: () => _edit(
                                 remote,
                                 i,
                                 (k) => k.copyWith(
                                   foto: k.foto == null
                                       ? 'simulasi://checklist/'
-                                          '${widget.bookingId}/${_tahap.name}/$i'
+                                            '${widget.bookingId}/${_tahap.name}/$i'
                                       : null,
                                 ),
                               ),
@@ -363,6 +545,36 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
                       keyboardType: TextInputType.multiline,
                       textCapitalization: TextCapitalization.sentences,
                     ),
+                    if (!akhir && !barter && isOwner) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _PembayaranCard(
+                        booking: d.booking,
+                        enabled: !akuSetuju && !remote.selesai && !_bayarBusy,
+                        onUbah: (metode, diterima) =>
+                            _catatBayar(d.booking, metode, diterima),
+                      ),
+                    ] else if (!akhir && !barter && !remote.selesai) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      AppInfoNote(
+                        icon: Icons.payments_outlined,
+                        message:
+                            'Bayar ${formatRupiah(d.booking.totalHarga)} '
+                            'langsung ke ${firstName(d.pemilik.nama)} saat '
+                            'serah terima: tunai atau transfer.',
+                      ),
+                    ],
+                    if (akhir && denda.total > 0) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _DendaCard(
+                        denda: denda,
+                        dendaPerHari: barang.dendaPerHari,
+                        pemilik: isOwner,
+                        diterima: dendaTercatat >= denda.total,
+                        enabled: !akuSetuju && !remote.selesai && !_bayarBusy,
+                        onUbah: (v) =>
+                            _catatDenda(d.booking, v, itemId: _barang),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     Container(
                       key: const Key('checklist-persetujuan'),
@@ -384,16 +596,20 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
                         ],
                       ),
                     ),
-                    if (akhir) ...[
+                    if (akhir && items.any((k) => !k.dicek)) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: () => ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(const SnackBar(
-                                content: Text('Fitur laporan segera hadir'))),
-                          child: const Text('Ada masalah dengan barang?'),
+                        child: TextButton.icon(
+                          key: const Key('laporkan-kerusakan'),
+                          onPressed: () => context.push(
+                            AppRoutes.laporanBaru(
+                              bookingId: d.booking.id,
+                              barangId: _barang,
+                            ),
+                          ),
+                          icon: const Icon(Icons.flag_outlined),
+                          label: const Text('Laporkan kerusakan'),
                         ),
                       ),
                     ],
@@ -408,21 +624,34 @@ class _ChecklistPageState extends ConsumerState<ChecklistPage> {
                       ? null
                       : [..._masalah, ?_error].join('\n'),
                 ),
+                if (syaratPemilik != null && !akuSetuju && !remote.selesai)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text(
+                      syaratPemilik,
+                      key: const Key('checklist-syarat'),
+                      textAlign: TextAlign.center,
+                      style: text.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 if (!remote.selesai)
                   AppButton(
                     key: const Key('checklist-setujui'),
                     label: akuSetuju
                         ? 'Menunggu $lawanNama…'
                         : akhir
-                            ? 'Setujui pengembalian'
-                            : 'Setujui serah terima',
+                        ? 'Setujui pengembalian'
+                        : 'Setujui serah terima',
                     isLoading: _busy,
-                    onPressed:
-                        akuSetuju ? null : () => _approve(remote, user.id),
+                    onPressed: akuSetuju || syaratPemilik != null
+                        ? null
+                        : () => _approve(remote, user.id),
                   )
                 else
                   AppButton(
-                    label: 'Kembali',
+                    label: AppTeks.kembali,
                     variant: AppButtonVariant.secondary,
                     onPressed: _back,
                   ),
@@ -464,28 +693,36 @@ class _KondisiRow extends StatelessWidget {
                 key: Key('kondisi-$index'),
                 onTap: enabled ? onToggle : null,
                 borderRadius: AppRadius.inputAll,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Row(
-                    children: [
-                      SizedBox.square(
-                        dimension: AppSizes.checkbox,
-                        child: Checkbox(
-                          value: item.dicek,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          onChanged: enabled ? (_) => onToggle() : null,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: AppSizes.minTapTarget,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox.square(
+                          dimension: AppSizes.checkbox,
+                          child: Checkbox(
+                            value: item.dicek,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            onChanged: enabled ? (_) => onToggle() : null,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Text(
-                          item.label,
-                          style: theme.textTheme.bodyMedium
-                              ?.merge(AppTextStyles.checklistLabel),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            style: theme.textTheme.bodyMedium?.merge(
+                              AppTextStyles.checklistLabel,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -527,17 +764,24 @@ class _FotoSlot extends StatelessWidget {
             width: AppSizes.fotoSlot,
             height: AppSizes.fotoSlot,
             decoration: const BoxDecoration(
-                color: AppPalette.brandMid, borderRadius: radius),
-            child: const Icon(Icons.image_rounded,
-                color: AppPalette.cream, size: AppSizes.iconMd),
+              color: AppPalette.brandMid,
+              borderRadius: radius,
+            ),
+            child: const Icon(
+              Icons.image_rounded,
+              color: AppPalette.cream,
+              size: AppSizes.iconMd,
+            ),
           )
         : DashedBorder(
             radius: AppRadius.filterButton,
             child: SizedBox.square(
               dimension: AppSizes.fotoSlot,
-              child: Icon(Icons.add_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: AppSizes.iconMd),
+              child: Icon(
+                Icons.add_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: AppSizes.iconMd,
+              ),
             ),
           );
 
@@ -582,14 +826,159 @@ class _AvatarPair extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: AppColors.of(context).accentSoft,
-                      width: AppSizes.dashedStroke),
+                    color: AppColors.of(context).accentSoft,
+                    width: AppSizes.dashedStroke,
+                  ),
                 ),
                 child: AppAvatar(user: penyewa, size: size, showBadge: false),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Bagian "Pembayaran" di checklist awal, hanya untuk pemilik: metode dan
+/// switch "Pembayaran sudah diterima" (syarat menyetujui serah terima).
+class _PembayaranCard extends StatelessWidget {
+  const _PembayaranCard({
+    required this.booking,
+    required this.enabled,
+    required this.onUbah,
+  });
+
+  final Booking booking;
+  final bool enabled;
+  final void Function(MetodeBayar metode, bool diterima) onUbah;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+    final metode = booking.metodeBayar ?? MetodeBayar.tunai;
+    final lunas = booking.statusBayar == StatusBayar.lunas;
+
+    return AppCard(
+      key: const Key('checklist-pembayaran'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text('Pembayaran', style: text.titleMedium)),
+              BayarBadge(booking.statusBayar),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${formatRupiah(booking.totalHarga)} dibayar penyewa langsung '
+            'kepadamu saat serah terima.',
+            style: text.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            children: [
+              for (final m in MetodeBayar.values)
+                AppChip(
+                  key: Key('metode-${m.name}'),
+                  label: m.label,
+                  selected: metode == m,
+                  onTap: () {
+                    if (enabled) onUbah(m, lunas);
+                  },
+                ),
+            ],
+          ),
+          // Material sendiri: latar kartu tidak menutupi efek ink ListTile.
+          Material(
+            type: MaterialType.transparency,
+            child: MergeSemantics(
+              child: SwitchListTile(
+                key: const Key('bayar-diterima'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Pembayaran sudah diterima',
+                  style: text.bodyMedium,
+                ),
+                value: lunas,
+                onChanged: enabled ? (v) => onUbah(metode, v) : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Denda keterlambatan di checklist akhir; pemilik mengonfirmasi diterima.
+class _DendaCard extends StatelessWidget {
+  const _DendaCard({
+    required this.denda,
+    required this.dendaPerHari,
+    required this.pemilik,
+    required this.diterima,
+    required this.enabled,
+    required this.onUbah,
+  });
+
+  final ({int hari, int total}) denda;
+  final int dendaPerHari;
+  final bool pemilik;
+  final bool diterima;
+  final bool enabled;
+  final ValueChanged<bool> onUbah;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final text = theme.textTheme;
+    final error = theme.colorScheme.error;
+    return AppCard(
+      key: const Key('checklist-denda'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Denda keterlambatan', style: text.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Terlambat ${denda.hari} hari × ${formatRupiah(dendaPerHari)} = '
+            '${formatRupiah(denda.total)}',
+            key: const Key('denda-total'),
+            style: text.bodyMedium?.copyWith(
+              color: error,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (pemilik)
+            // Material sendiri: latar kartu tidak menutupi efek ink ListTile.
+            Material(
+              type: MaterialType.transparency,
+              child: MergeSemantics(
+                child: SwitchListTile(
+                  key: const Key('denda-diterima'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Denda diterima', style: text.bodyMedium),
+                  value: diterima,
+                  onChanged: enabled ? onUbah : null,
+                ),
+              ),
+            )
+          else ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Bayar denda ke pemilik saat pengembalian.',
+              style: text.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -15,6 +15,9 @@ flutter run
 Catatan: `--delete-conflicting-outputs` sudah dihapus di build_runner 2.16+; jangan dipakai.
 
 Setelah mengubah blok `flutter_native_splash:` di pubspec: `dart run flutter_native_splash:create`.
+Setelah mengubah blok `flutter_launcher_icons:` atau gambar di `assets/icon/`: `dart run flutter_launcher_icons`.
+
+Build rilis: `flutter build apk --release` (di laptop ini gen_snapshot x64 diblokir Smart App Control; pakai `--target-platform android-arm,android-arm64`).
 
 Reset onboarding & sesi di HP/emulator: `adb shell pm clear com.example.hobby_swab` (atau hapus data aplikasi).
 
@@ -38,6 +41,8 @@ Reset onboarding & sesi di HP/emulator: `adb shell pm clear com.example.hobby_sw
 - Pakai ulang `lib/core/widgets/` (AppButton, AppTextField, HsLogoMark, ...); jangan buat duplikat.
 - Rute didefinisikan di `lib/core/router/` (`AppRoutes`), navigasi pakai `context.go`/`context.push`.
 - Setiap layar: dark & light, `SafeArea`, tap target ≥ 48, state loading/empty/error.
+- Teks berulang (label status, pesan error umum) ada di `lib/core/constants/app_strings.dart` (`AppTeks`).
+- Aksesibilitas diuji di `test/a11y/` (font 1.3× & 2×, tap target, label, urutan fokus); layar utama baru ditambahkan ke `layar_utama.dart`.
 - `legacy/v0/` berisi kode versi awal untuk referensi saja (dikecualikan dari analyzer, tidak di-build).
 
 ## Akun demo
@@ -48,6 +53,6 @@ Password keduanya `hobbyswap2026`:
 - Belum verifikasi (uji alur KTM): `aulia@students.usu.ac.id` / NIM `220402011`
 - Pemilik barang contoh (terverifikasi): `rizky@`, `sarah@`, `dimas@students.usu.ac.id`
 
-Alat bantu debug (hanya debug build) ada di tab Profil: setujui verifikasi, dan gagalkan muat barang berikutnya untuk menguji state error.
+Alat pengembang (hanya debug build) ada di tab Profil: reset onboarding, reset data contoh, simulasikan KTM disetujui, sakelar balasan otomatis Pesan, dan gagalkan muat barang berikutnya (uji state error).
 
 Aksi yang butuh akun terverifikasi (ajukan sewa, sewakan barang) wajib lewat `requireVerified()` di `lib/core/guards/`.

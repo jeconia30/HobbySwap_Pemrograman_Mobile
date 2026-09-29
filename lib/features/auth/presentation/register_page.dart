@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,7 @@ import '../../../core/widgets/app_sticky_bottom.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../domain/auth_repository.dart';
 import 'auth_controller.dart';
+import '../../../core/constants/app_strings.dart';
 
 typedef _Taken = ({String value, String message});
 
@@ -41,8 +43,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   _Taken? _takenNim;
   _Taken? _takenEmail;
 
+  late final _syaratTap = TapGestureRecognizer()
+    ..onTap = () => context.push(AppRoutes.syarat);
+  late final _privasiTap = TapGestureRecognizer()
+    ..onTap = () => context.push(AppRoutes.privasi);
+
   @override
   void dispose() {
+    _syaratTap.dispose();
+    _privasiTap.dispose();
     _nama.dispose();
     _nim.dispose();
     _email.dispose();
@@ -78,7 +87,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             password: _password.text,
           );
       if (!mounted) return;
-      HapticFeedback.lightImpact();
       context.go(AppRoutes.verifikasi);
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -99,7 +107,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _errorMessage = 'Koneksi lagi putus. Coba lagi ya.';
+        _errorMessage = AppTeks.koneksiPutus;
       });
     }
   }
@@ -238,11 +246,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             TextSpan(
                               text: 'Syarat Layanan',
                               style: AppCheckboxField.linkStyle(context),
+                              recognizer: _syaratTap,
                             ),
                             const TextSpan(text: ' dan '),
                             TextSpan(
                               text: 'Kebijakan Privasi',
                               style: AppCheckboxField.linkStyle(context),
+                              recognizer: _privasiTap,
                             ),
                             const TextSpan(text: ' HobbySwap.'),
                           ]),
