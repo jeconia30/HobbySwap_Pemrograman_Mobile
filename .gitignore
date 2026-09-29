@@ -47,5 +47,6 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-# Izin lokal Claude Code (per mesin)
-.claude/settings.local.json
+# Berkas Claude Code (lokal, tidak ikut repo)
+.claude/
+CLAUDE.md
