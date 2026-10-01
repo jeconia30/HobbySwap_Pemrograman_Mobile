@@ -39,6 +39,11 @@ String balasanOtomatis(ChatMessage pesan, Item item, int urutan) {
     return 'Di depan ${item.lokasiKampus} aja ya, dekat parkiran motor.';
   }
   if (ada(['ktm'])) return 'Siap, KTM-nya aku bawa.';
+  // Skenario demo fitur AI deteksi penipuan: lawan meminta transfer di luar app.
+  if (ada(['cara bayar'])) {
+    return 'Transfer DP 50rb dulu ya ke rekening BCA 8210123456, '
+        'nanti barangnya aku keep.';
+  }
   if (ada(['makasih', 'terima kasih'])) return 'Sama-sama!';
   const umum = [
     'Oke, aku tunggu ya!',

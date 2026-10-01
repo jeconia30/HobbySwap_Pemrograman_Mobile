@@ -24,6 +24,8 @@ import '../../../core/widgets/availability_calendar.dart';
 import '../../../core/widgets/item_thumb.dart';
 import '../../item/data/item_providers.dart';
 import '../../item/domain/item.dart';
+import '../../../core/widgets/app_info_note.dart';
+import '../data/barter_ai.dart';
 import '../data/booking_providers.dart';
 import '../domain/booking_repository.dart';
 import '../domain/booking_rules.dart';
@@ -280,8 +282,22 @@ class _LangkahPilih extends ConsumerWidget {
       );
     }
     final baris = (pilihan.length / 2).ceil();
+    final saran = ref.watch(saranBarterProvider(target.id)).value;
+    final barangSaran =
+        pilihan.where((l) => l.item.id == saran?.itemId).firstOrNull;
     return Column(
       children: [
+        if (saran != null && barangSaran != null) ...[
+          AppInfoNote(
+            key: const Key('saran-barter-ai'),
+            icon: Icons.auto_awesome_rounded,
+            message:
+                'Saran AI: ${barangSaran.item.judul}. ${saran.alasan}'.trim(),
+            actionLabel: dipilih == saran.itemId ? null : 'Pilih ini',
+            onAction: () => onPilih(barangSaran),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
         for (var r = 0; r < baris; r++) ...[
           if (r > 0) const SizedBox(height: AppSpacing.md),
           IntrinsicHeight(

@@ -12,6 +12,8 @@ import '../../../core/widgets/app_empty_state.dart';
 import '../../auth/domain/user.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../item/data/item_providers.dart';
+import '../../../core/widgets/app_info_note.dart';
+import '../data/review_ai.dart';
 import '../data/review_providers.dart';
 import '../domain/review.dart';
 import 'review_tile.dart';
@@ -88,6 +90,15 @@ class UlasanSection extends ConsumerWidget {
         ),
         _Ringkasan(owner: owner),
         const SizedBox(height: AppSpacing.md),
+        if (ref.watch(ringkasanUlasanProvider(owner.id)).value
+            case final ringkasan?) ...[
+          AppInfoNote(
+            key: const Key('ringkasan-ulasan-ai'),
+            icon: Icons.auto_awesome_rounded,
+            message: 'Ringkasan AI: $ringkasan',
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         if (async.isLoading && !async.hasValue)
           const Skeletonizer(child: Text('Memuat ulasan dari penyewa'))
         else if (list.isEmpty)
