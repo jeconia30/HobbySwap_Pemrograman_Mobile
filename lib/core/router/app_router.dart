@@ -84,8 +84,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       _page(AppRoutes.daftar, (_, _) => const RegisterPage()),
       _page(AppRoutes.verifikasi, (_, _) => const VerifikasiPage()),
       _page(AppRoutes.verifikasiStatus, (_, _) => const VerifikasiStatusPage()),
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
+        navigatorContainerBuilder: (context, shell, children) =>
+            AnimatedBranchContainer(
+                currentIndex: shell.currentIndex, children: children),
         branches: [
           StatefulShellBranch(
             routes: [_page(AppRoutes.beranda, (_, _) => const HomePage())],

@@ -76,9 +76,6 @@ abstract final class AppSizes {
   /// Skala saat ditekan (DESIGN §5).
   static const double pressScale = 0.97;
 
-  /// Geser halus transisi halaman.
-  static const double pageSlide = 16;
-
   static const double buttonHeight = 56;
   static const double fieldHeight = 54;
   static const double minTapTarget = 48;
@@ -208,7 +205,6 @@ abstract final class AppDurations {
   static const Duration press = Duration(milliseconds: 120);
   static const Duration short = Duration(milliseconds: 200);
   static const Duration page = Duration(milliseconds: 300);
-  static const Duration pageTransition = Duration(milliseconds: 250);
 
   /// Jeda sebelum tautan reset boleh dikirim ulang.
   static const Duration kirimUlang = Duration(seconds: 60);

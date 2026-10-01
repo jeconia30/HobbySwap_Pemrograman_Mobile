@@ -155,7 +155,7 @@ Aturan warna:
 
 - Durasi transisi: 150-300 ms. Easing: `easeOutCubic` atau spring ringan.
 - Tap: skala turun ke 0.97, lalu kembali. Sertakan **haptic ringan** untuk aksi penting (suka, kirim, konfirmasi).
-- Transisi antar layar: shared element atau fade+slide halus, bukan lompatan mendadak.
+- Transisi antar layar: halaman baru geser penuh dari kanan (gaya iOS, bisa swipe dari tepi kiri untuk kembali). Pindah tab bottom nav: geser 30% + fade dari arah tab tujuan. Bukan lompatan mendadak.
 - Aksi berhasil: animasi kecil (centang, konfeti ringan untuk momen spesial saja).
 - Hormati pengaturan sistem "reduce motion": kurangi atau matikan animasi.
 
