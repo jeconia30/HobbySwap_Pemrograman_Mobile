@@ -143,6 +143,7 @@ class ChatGelembung extends StatelessWidget {
     this.rapatBawah = false,
     this.onSetujuCod,
     this.onUsulLainCod,
+    this.bawah,
   });
 
   final ChatMessage message;
@@ -152,6 +153,9 @@ class ChatGelembung extends StatelessWidget {
   final bool rapatBawah;
   final VoidCallback? onSetujuCod;
   final VoidCallback? onUsulLainCod;
+
+  /// Tambahan di bawah gelembung (mis. peringatan penipuan dari AI).
+  final Widget? bawah;
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +254,7 @@ class ChatGelembung extends StatelessWidget {
             key: Key('bubble-${message.id}'),
             crossAxisAlignment:
                 milikku ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            children: [isi, if (!rapatBawah) meta],
+            children: [isi, ?bawah, if (!rapatBawah) meta],
           ),
         ),
       ),

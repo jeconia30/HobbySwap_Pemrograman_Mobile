@@ -21,6 +21,7 @@ import '../../../core/widgets/batal_mendadak_label.dart';
 import '../../auth/domain/user.dart';
 import '../../booking/domain/booking.dart';
 import '../../review/data/review_providers.dart';
+import '../data/chat_ai.dart';
 import '../data/chat_providers.dart';
 import '../domain/chat_message.dart';
 import '../domain/chat_repository.dart';
@@ -339,6 +340,11 @@ class _RuangObrolanPageState extends ConsumerState<RuangObrolanPage> {
                   rapatBawah: rapatBawah,
                   onSetujuCod: () => _jawabCod(view, m, true),
                   onUsulLainCod: () => _jawabCod(view, m, false),
+                  bawah: m.senderId != view.viewerId &&
+                          m.tipe == TipePesan.teks &&
+                          perluCekPenipuan(m.isi)
+                      ? _PeringatanPenipuan(teks: m.isi)
+                      : null,
                 ),
               ),
           };
@@ -428,6 +434,43 @@ class _RuangObrolanPageState extends ConsumerState<RuangObrolanPage> {
               title: title,
               actionLabel: actionLabel,
               onAction: onAction,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Peringatan AI di bawah pesan masuk yang mirip modus penipuan.
+class _PeringatanPenipuan extends ConsumerWidget {
+  const _PeringatanPenipuan({required this.teks});
+
+  final String teks;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final alasan = ref.watch(peringatanPenipuanProvider(teks)).value;
+    if (alasan == null) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final warna = theme.colorScheme.error;
+    return Padding(
+      key: const Key('peringatan-penipuan'),
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Semantics(
+        liveRegion: true,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.gpp_maybe_rounded, size: AppSizes.iconXs, color: warna),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                'Hati-hati: $alasan Bayar hanya lewat HobbySwap atau tunai '
+                'saat COD.',
+                style: theme.textTheme.bodySmall?.copyWith(color: warna),
+              ),
             ),
           ],
         ),

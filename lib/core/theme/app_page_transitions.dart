@@ -1,17 +1,16 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
-import 'app_spacing.dart';
-
-/// Transisi antarhalaman DESIGN §5: fade + geser 16 px, 250 ms, easeOutCubic.
+/// Transisi antarhalaman: halaman baru bergeser masuk dari kanan, halaman lama
+/// ikut bergeser sedikit ke kiri, dan bisa swipe dari tepi kiri untuk kembali.
 /// Bottom sheet & dialog tidak lewat sini (tetap animasi bawaan). Saat animasi
 /// sistem dimatikan, halaman langsung tampil.
 class AppPageTransitionsBuilder extends PageTransitionsBuilder {
   const AppPageTransitionsBuilder();
 
-  static final _curve = CurveTween(curve: Curves.easeOutCubic);
+  static const _slide = CupertinoPageTransitionsBuilder();
 
   @override
-  Duration get transitionDuration => AppDurations.pageTransition;
+  Duration get transitionDuration => _slide.transitionDuration;
 
   @override
   Widget buildTransitions<T>(
@@ -22,17 +21,7 @@ class AppPageTransitionsBuilder extends PageTransitionsBuilder {
     Widget child,
   ) {
     if (MediaQuery.disableAnimationsOf(context)) return child;
-    final t = animation.drive(_curve);
-    return FadeTransition(
-      opacity: t,
-      child: AnimatedBuilder(
-        animation: t,
-        builder: (context, child) => Transform.translate(
-          offset: Offset(AppSizes.pageSlide * (1 - t.value), 0),
-          child: child,
-        ),
-        child: child,
-      ),
-    );
+    return _slide.buildTransitions(
+        route, context, animation, secondaryAnimation, child);
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/booking/data/booking_providers.dart';
 import '../guards/require_verified.dart';
+import '../theme/app_spacing.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'app_routes.dart';
 
@@ -30,8 +31,51 @@ const _tabs = [
   ),
 ];
 
-/// Kerangka tab utama. Tiap tab hidup di IndexedStack, jadi posisi scroll-nya
-/// tetap tersimpan saat berpindah tab.
+/// Wadah tab: semua tab tetap hidup (state & scroll tersimpan). Tab tujuan
+/// bergeser masuk dari arah posisinya di bottom nav, tab lama bergeser keluar.
+class AnimatedBranchContainer extends StatelessWidget {
+  const AnimatedBranchContainer({
+    super.key,
+    required this.currentIndex,
+    required this.children,
+  });
+
+  final int currentIndex;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : AppDurations.page;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        for (var i = 0; i < children.length; i++)
+          IgnorePointer(
+            ignoring: i != currentIndex,
+            // Tab yang tidak terlibat ikut bergeser tapi tak terlihat (opacity 0).
+            // TickerMode hanya membungkus isi tab: animasi geser/fade tab yang
+            // ditinggalkan harus tetap jalan sampai selesai.
+            child: AnimatedOpacity(
+              opacity: i == currentIndex ? 1 : 0,
+              duration: duration,
+              curve: Curves.easeOutCubic,
+              child: AnimatedSlide(
+                offset: Offset((i - currentIndex).sign * 0.3, 0),
+                duration: duration,
+                curve: Curves.easeOutCubic,
+                child: TickerMode(
+                    enabled: i == currentIndex, child: children[i]),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Kerangka tab utama.
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
 
